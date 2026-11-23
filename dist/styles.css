@@ -202,6 +202,11 @@ h1 {
   color: var(--muted);
   margin: 0 0 25px;
 }
+.intro:empty,
+#modeDescription:empty {
+  display: none;
+  margin: 0;
+}
 h2 {
   font-size: 14px;
   font-weight: 600;
@@ -352,6 +357,9 @@ input[type="range"] {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
+}
+.practice-mode .workspace-heading {
+  display: none;
 }
 .eyebrow {
   font-size: 10px;

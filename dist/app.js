@@ -120,8 +120,8 @@ function sync() {
 
   if (practice) {
     $("modeTitle").textContent = "Practice Studio";
-    $("modeDescription").textContent = "Draft Anna University syllabus problems step-by-step.";
-    $("workspaceTitle").textContent = "Interactive Scaled Drafting Canvas";
+    $("modeDescription").textContent = "";
+    $("workspaceTitle").textContent = "";
     document.querySelectorAll("[data-view]").forEach((b) => (b.disabled = true));
     $("angleStatus").textContent = "1 mm = 4 px · True CAD Scale";
     if (!practiceCanvas) {
@@ -134,8 +134,8 @@ function sync() {
     }
   } else if (curve) {
     $("modeTitle").textContent = "Engineering curves";
-    $("modeDescription").textContent = "Trace the rule behind the curve.";
-    $("workspaceTitle").textContent = "Geometry, one point at a time.";
+    $("modeDescription").textContent = "";
+    $("workspaceTitle").textContent = "Engineering curves";
     $("drawingTitle").innerHTML = "Curve construction <span>2D</span>";
     $("drawingTag").textContent = "PARAMETRIC CONSTRUCTION";
     document.querySelectorAll("[data-view]").forEach((b) => (b.disabled = true));
@@ -151,8 +151,8 @@ function sync() {
       : `e ${state.curve === "parabola" ? 1 : state.ecc} · ${state.curve}`;
   } else {
     $("modeTitle").textContent = "Solid projections";
-    $("modeDescription").textContent = "See the solid. Understand every line.";
-    $("workspaceTitle").textContent = "One solid. Three perspectives.";
+    $("modeDescription").textContent = "";
+    $("workspaceTitle").textContent = "First-angle projections";
     $("drawingTitle").innerHTML = "Orthographic sheet <span>2D</span>";
     $("drawingTag").textContent = "FIRST ANGLE";
     $("height").disabled = state.solid === "cube";

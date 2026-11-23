@@ -828,7 +828,7 @@ export const QUESTIONS = [
 ];
 
 export const TOPICS = [
-  { id: "all", name: "All Units (GE3251)" },
+  { id: "all", name: "All Units" },
   { id: "Projection of Solids", name: "Unit 1: Projection of Solids" },
   { id: "Section of Solids", name: "Unit 2: Section of Solids" },
   { id: "Development of Surfaces", name: "Unit 3: Development of Surfaces" },
