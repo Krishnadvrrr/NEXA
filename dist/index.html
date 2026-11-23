@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0b0f19" />
+    <meta
+      name="description"
+      content="Explore engineering solids, first-angle projections and engineering curves in an interactive drafting studio."
+    />
+    <title>EG / Projection Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="./" aria-label="EG Studio home"
+        ><span class="brandmark">◇</span
+        ><span
+          >EG<span class="brandthin"> / STUDIO</span
+          ><small>ENGINEERING GRAPHICS LAB</small></span
+        ></a
+      >
+      <nav aria-label="Workspace mode">
+        <button class="mode active" data-mode="solid">Projections</button
+        ><button class="mode" data-mode="curve">Engineering curves</button
+        ><button class="mode" data-mode="practice">Practice Studio</button>
+      </nav>
+      <button id="export" class="primary">↓ Export drawing sheet</button>
+    </header>
+    <div class="toolbar">
+      <button id="collapse" aria-expanded="true" aria-controls="controls">
+        ☷ Parameters</button
+      ><span class="divider"></span><span class="muted">VIEW</span>
+      <div id="presets">
+        <button data-view="iso" class="active">Iso</button
+        ><button data-view="front">Front</button
+        ><button data-view="top">Top</button
+        ><button data-view="side">Side</button>
+      </div>
+      <button id="reset">Reset workspace</button
+      ><span class="toolbar-end"
+        >FIRST-ANGLE PROJECTION <span class="badge">mm</span></span
+      >
+    </div>
+    <main>
+      <aside id="controls">
+        <div class="section-heading">WORKSPACE <span>01</span></div>
+        <h1 id="modeTitle">Solid projections</h1>
+        <p class="intro" id="modeDescription">
+          See the solid. Understand every line.
+        </p>
+        <section id="solidControls">
+          <label for="solid">Geometry</label
+          ><select id="solid">
+            <option value="hexPrism">Hexagonal prism</option>
+            <option value="cube">Cube</option>
+            <option value="squarePrism">Square prism</option>
+            <option value="squarePyramid">Square pyramid</option>
+            <option value="hexPyramid">Hexagonal pyramid</option>
+            <option value="cylinder">Cylinder</option>
+            <option value="cone">Cone</option>
+          </select>
+          <div class="two">
+            <label
+              ><span id="sizeLabel">Base edge</span>
+              <div class="unit">
+                <input
+                  id="size"
+                  type="number"
+                  min="1"
+                  max="150"
+                  value="30"
+                /><span>mm</span>
+              </div></label
+            ><label
+              >Height
+              <div class="unit">
+                <input
+                  id="height"
+                  type="number"
+                  min="1"
+                  max="200"
+                  value="70"
+                /><span>mm</span>
+              </div></label
+            >
+          </div>
+          <h2>Axis orientation</h2>
+          <label class="range-label" for="alpha"
+            >Inclination to HP <output id="alphaValue">60°</output></label
+          ><input id="alpha" type="range" min="0" max="90" value="60" /><label
+            class="range-label"
+            for="beta"
+            >Inclination to VP <output id="betaValue">20°</output></label
+          ><input id="beta" type="range" min="0" max="90" value="20" /><label
+            class="range-label"
+            for="roll"
+            >Rotation about axis <output id="rollValue">0°</output></label
+          ><input id="roll" type="range" min="0" max="180" value="0" />
+          <p class="note">
+            True axis angles satisfy α + β ≤ 90°. Changing one limits the other.
+            The solid stays above HP and in front of VP.
+          </p>
+          <label for="side">Side view</label
+          ><select id="side">
+            <option value="right">Right side · placed left of FV</option>
+            <option value="left">Left side · placed right of FV</option>
+          </select>
+        </section>
+        <section id="curveControls" hidden>
+          <label for="curve">Curve family</label
+          ><select id="curve">
+            <option value="ellipse">Ellipse</option>
+            <option value="parabola">Parabola</option>
+            <option value="hyperbola">Hyperbola</option>
+            <option value="cycloid">Cycloid</option>
+            <option value="involute">Involute of a circle</option></select
+          ><label id="distanceLabel"
+            >Focus–directrix distance
+            <div class="unit">
+              <input
+                id="distance"
+                type="number"
+                value="35"
+                min="1"
+                max="150"
+              /><span>mm</span>
+            </div></label
+          ><label id="eccLabel"
+            >Eccentricity e<input
+              id="ecc"
+              type="number"
+              value="0.65"
+              min="0.1"
+              max="0.95"
+              step="0.05" /></label
+          ><label id="radiusLabel" hidden
+            >Generating radius
+            <div class="unit">
+              <input
+                id="radius"
+                type="number"
+                value="25"
+                min="1"
+                max="100"
+              /><span>mm</span>
+            </div></label
+          >
+          <h2>Construction playback</h2>
+          <div class="two">
+            <button id="play" class="primary">▶ Animate</button
+            ><button id="step">Next step</button>
+          </div>
+          <label class="range-label" for="progress"
+            >Construction progress
+            <output id="progressValue">100%</output></label
+          ><input
+            id="progress"
+            type="range"
+            min="0"
+            max="100"
+            value="100"
+          /><label class="range-label" for="point"
+            >Inspection point <output id="pointValue">40%</output></label
+          ><input id="point" type="range" min="0" max="100" value="40" /><label
+            class="check"
+            ><input id="tangent" type="checkbox" checked /> Tangent &
+            normal</label
+          >
+          <p class="note">
+            Click the curve to inspect the nearest point. At a cycloid cusp the
+            limiting tangent is shown.
+          </p>
+        </section>
+        <section id="practiceControls" hidden>
+          <label for="topicSelect">Syllabus unit</label>
+          <select id="topicSelect">
+            <option value="all">All Units (Anna Univ GE3251)</option>
+            <option value="Projection of Solids">Unit 1: Projection of Solids</option>
+            <option value="Section of Solids">Unit 2: Section of Solids</option>
+            <option value="Development of Surfaces">Unit 3: Development of Surfaces</option>
+            <option value="free-practice">Free Practice (Open Sheet)</option>
+          </select>
+
+          <label for="questionSelect">Select practice problem</label>
+          <select id="questionSelect"></select>
+
+          <div id="problemCard" class="card-box">
+            <div class="card-header">
+              <span class="badge" id="problemUnitBadge">UNIT 1</span>
+              <button type="button" id="btnView3D" class="subtle-link-btn" title="Inspect 3D solid model">🔍 View in 3D</button>
+            </div>
+            <h3 id="problemTitle" class="card-title">Problem Title</h3>
+            <p id="problemStatement" class="problem-text">Problem statement text goes here...</p>
+            <div id="problemParams" class="param-tags"></div>
+          </div>
+
+          <div id="stepCard" class="card-box step-box">
+            <div class="card-header">
+              <span id="stepProgressBadge" class="badge active-badge">STEP 1 OF 6</span>
+              <span id="stepLineTypeBadge" class="grade-pill">Grade: 2H</span>
+            </div>
+            <h4 id="stepTitle" class="step-title">Step Title</h4>
+            <p id="stepInstruction" class="step-text">Draw the horizontal reference line...</p>
+            <details id="stepHintDetails" class="hint-details">
+              <summary>💡 Helpful Drafting Hint</summary>
+              <p id="stepHint">Hint content...</p>
+            </details>
+
+            <div class="step-actions">
+              <button type="button" id="btnCheckStep" class="primary verify-btn">✓ Check Step</button>
+              <button type="button" id="btnToggleGhost" class="ghost-btn">👻 Ghost Guide: OFF</button>
+            </div>
+
+            <div id="stepFeedback" class="feedback-banner" hidden></div>
+
+            <div class="step-nav-bar">
+              <button type="button" id="btnPrevStep" disabled>← Previous</button>
+              <button type="button" id="btnNextStep">Next Step →</button>
+            </div>
+          </div>
+
+          <div class="practice-sheet-actions">
+            <button type="button" id="btnClearCanvas" class="secondary-btn">🗑 Clear Canvas</button>
+          </div>
+        </section>
+        <section id="layerControls">
+          <h2>Drawing layers</h2>
+          <label class="check"
+            ><input id="construction" type="checkbox" checked /> Projectors &
+            construction</label
+          ><label class="check"
+            ><input id="hidden" type="checkbox" checked /> Hidden edges</label
+          ><label class="check"
+            ><input id="labels" type="checkbox" checked /> Point labels</label
+          ><label class="check"
+            ><input id="dimensions" type="checkbox" checked /> Dimensions</label
+          >
+          <div class="line-key">
+            <span><i class="visible"></i>Visible</span
+            ><span><i class="hidden-line"></i>Hidden</span
+            ><span><i class="axis-line"></i>Axis</span
+            ><span><i class="dimension-line"></i>Dimension</span>
+          </div>
+        </section>
+        <div class="aside-footer">
+          EG / STUDIO <span>LEARN THROUGH GEOMETRY</span>
+        </div>
+      </aside>
+      <div class="workspace">
+        <div class="workspace-heading">
+          <div>
+            <span class="eyebrow">THE PROJECTION LAB</span>
+            <h2 id="workspaceTitle">One solid. Three perspectives.</h2>
+          </div>
+          <span class="live"><i></i> Live geometry</span>
+        </div>
+        <div class="panels" id="panels">
+          <section class="panel model-panel">
+            <div class="panel-heading">
+              <h3>Spatial view <span>3D</span></h3>
+              <span id="modelTag">ORTHOGRAPHIC CAMERA</span>
+            </div>
+            <div id="threeHost">
+              <div id="threeLoading">Loading 3D engine…</div>
+            </div>
+            <div class="panel-foot">
+              Drag to orbit <span>Scroll to zoom · Right-drag to pan</span>
+            </div>
+          </section>
+          <section class="panel drawing-panel">
+            <div class="panel-heading">
+              <h3 id="drawingTitle">Orthographic sheet <span>2D</span></h3>
+              <span id="drawingTag">FIRST ANGLE</span>
+            </div>
+            <div class="drawing-host">
+              <svg
+                id="drawing"
+                role="img"
+                aria-label="Live engineering drawing"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 1100 850"
+              ></svg>
+            </div>
+            <div class="panel-foot" id="drawingFoot">
+              FV above XY · TV below XY <span>Right-side view on the left</span>
+            </div>
+          </section>
+        </div>
+        <div class="insight">
+          <span class="insight-icon">◎</span>
+          <div>
+            <strong id="insightTitle">Follow the projectors</strong>
+            <p id="insightText">
+              Front and top views share width. Front and side views share
+              height. Dashed lines reveal edges behind the visible faces.
+            </p>
+          </div>
+          <span class="badge">EXPLORATION MODE</span>
+        </div>
+
+        <div id="practiceWorkspace" class="practice-workspace" hidden>
+          <div class="cad-toolbar">
+            <div class="tool-group">
+              <button type="button" class="cad-tool-btn active" data-tool="line" title="Line Tool (L) — click-click or drag">
+                <span class="tool-icon">╱</span> Line
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="polygon" title="Polygon Generator (P) — Regular polygons">
+                <span class="tool-icon">⬡</span> Polygon
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="circle" title="Circle Tool (C) — Base and generator circles">
+                <span class="tool-icon">○</span> Circle
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="projector" title="Smart Projector (J) — Strict vertical/horizontal alignment">
+                <span class="tool-icon">⇕</span> Projector
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="text" title="Vertex Label (T) — a, b, c or a', b', c'">
+                <span class="tool-icon">T</span> Label
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="dimension" title="Dimension Tool (D) — Add mm dimension lines">
+                <span class="tool-icon">↔</span> Dim
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="eraser" title="Eraser Tool (E) — Click element to delete">
+                <span class="tool-icon">⌫</span> Erase
+              </button>
+              <button type="button" class="cad-tool-btn" data-tool="pan" title="Pan Canvas (Space+Drag)">
+                <span class="tool-icon">✋</span> Pan
+              </button>
+            </div>
+
+            <span class="cad-divider"></span>
+
+            <div class="grade-group">
+              <select id="pencilGradeSelect" class="grade-select" title="Engineering Line Weight / Pencil Grade">
+                <option value="HB">HB · Outline (0.7 mm)</option>
+                <option value="2H">2H · Projector (0.25 mm)</option>
+                <option value="Hidden">Hidden · Dashed (0.4 mm)</option>
+                <option value="Axis">Axis · Centerline (0.3 mm)</option>
+                <option value="Cutting Plane">Cut Plane · Section (0.7 mm)</option>
+              </select>
+            </div>
+
+            <span class="cad-divider"></span>
+
+            <div class="constraint-group">
+              <button type="button" id="btnToggleOrtho" class="toggle-tool-btn" title="Toggle Orthogonal Lock (Shift)">
+                Ortho: OFF
+              </button>
+              <button type="button" id="btnToggleAngleSnap" class="toggle-tool-btn active" title="Toggle Angle Snapping (15°/30°/45°)">
+                Snap: 15°
+              </button>
+            </div>
+
+            <span class="cad-divider"></span>
+
+            <div class="history-group">
+              <button type="button" id="canvasUndo" class="cad-icon-btn" disabled title="Undo (Ctrl+Z)">↶</button>
+              <button type="button" id="canvasRedo" class="cad-icon-btn" disabled title="Redo (Ctrl+Y)">↷</button>
+              <button type="button" id="btnResetView" class="cad-icon-btn" title="Fit Viewport">⌖ Fit</button>
+              <span id="canvasZoomLevel" class="zoom-pill">100%</span>
+            </div>
+          </div>
+
+          <div class="practice-workspace-body" id="practiceWorkspaceBody">
+            <div class="practice-canvas-host" id="practiceCanvasHost">
+              <canvas id="draftingCanvas"></canvas>
+              <div id="snapBadge" class="snap-badge"></div>
+              <div id="canvasHud" class="canvas-hud">X: 0.0 mm | Y: 0.0 mm [HP (Top View)]</div>
+            </div>
+
+            <!-- Side screen column for Live Step-by-Step 3D Visualization -->
+            <div class="practice-3d-column" id="practice3dColumn">
+              <div class="practice-3d-header">
+                <div class="practice-3d-title-group">
+                  <span class="live-indicator-dot"></span>
+                  <h4>Step-by-Step 3D Development</h4>
+                </div>
+                <div class="practice-3d-actions">
+                  <div class="practice-3d-views">
+                    <button type="button" class="view-pill active" data-pview="iso">Iso</button>
+                    <button type="button" class="view-pill" data-pview="front">FV</button>
+                    <button type="button" class="view-pill" data-pview="top">TV</button>
+                  </div>
+                  <button type="button" id="btnToggle3DCol" class="toggle-col-btn" title="Toggle 3D side screen width">⛶</button>
+                </div>
+              </div>
+
+              <div class="practice-3d-viewport" id="practice3dViewport">
+                <div id="practice3dHost"></div>
+                <div class="viewport-hint">Drag to orbit · Scroll to zoom</div>
+              </div>
+
+              <div class="practice-3d-footer">
+                <div class="spatial-tag-badge" id="stepSpatialTag">Stage 2: 2D Base Resting on HP</div>
+                <p class="spatial-desc-text" id="stepSpatialDesc">
+                  In 3D reality, your drafted Top View is a physical 2D base lying directly on the Horizontal Plane (HP).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p id="notice" role="status" aria-live="polite"></p>
+      </div>
+    </main>
+    <footer>
+      <span><i class="status-dot"></i> <span id="status">Ready</span></span
+      ><span id="coordinates">X 0.0 · Y 0.0</span
+      ><span id="angleStatus">α 60° · β 20°</span
+      ><span>UNITS: MILLIMETRES</span>
+    </footer>
+    <dialog id="exportDialog">
+      <form id="exportForm">
+        <div class="dialog-title">
+          <h2>Export drawing sheet</h2>
+          <button type="button" id="closeDialog" aria-label="Close export">
+            ✕
+          </button>
+        </div>
+        <p>Print-ready vector geometry on a white engineering sheet.</p>
+        <label
+          >Project title<input
+            id="projectTitle"
+            maxlength="64"
+            value="Engineering Graphics — Projection Study"
+            required /></label
+        ><label
+          >Student name<input
+            id="studentName"
+            maxlength="48"
+            placeholder="Your name"
+        /></label>
+        <div class="two">
+          <label
+            >Sheet size<select id="paper">
+              <option>A3</option>
+              <option>A4</option>
+            </select></label
+          ><label
+            >Format<select id="format">
+              <option>SVG</option>
+              <option>PNG</option>
+            </select></label
+          >
+        </div>
+        <p class="note">
+          Landscape · automatic uniform scale · border and title block. PNG
+          exports at 300 dpi.
+        </p>
+        <button class="primary" type="submit">Download sheet</button>
+      </form>
+    </dialog>
+    <dialog id="polygonDialog">
+      <form id="polygonForm" method="dialog">
+        <div class="dialog-title">
+          <h2>Regular Polygon Generator</h2>
+          <button type="button" id="closePolygonDialog" aria-label="Close">✕</button>
+        </div>
+        <p>Specify the polygon parameters and click on the sheet to place.</p>
+        <label for="polySides">Number of sides</label>
+        <select id="polySides">
+          <option value="3">Triangle (3 sides)</option>
+          <option value="4" selected>Square (4 sides)</option>
+          <option value="5">Pentagon (5 sides)</option>
+          <option value="6">Hexagon (6 sides)</option>
+        </select>
+        <div class="two">
+          <label for="polyEdge">Base edge
+            <div class="unit">
+              <input id="polyEdge" type="number" min="5" max="150" value="30" /><span>mm</span>
+            </div>
+          </label>
+          <label for="polyAngle">Orientation angle
+            <div class="unit">
+              <input id="polyAngle" type="number" min="0" max="360" value="0" /><span>°</span>
+            </div>
+          </label>
+        </div>
+        <p class="note">Angle 0° places flat edge horizontal. Angle 45° or 30° tilts base as per syllabus problem.</p>
+        <button class="primary" type="submit">Apply & Place on Sheet</button>
+      </form>
+    </dialog>
+    <dialog id="preview3dDialog" class="preview-3d-dialog">
+      <div class="dialog-title">
+        <h2 id="preview3dTitle">3D Solid Model Inspector</h2>
+        <button type="button" id="closePreview3d" aria-label="Close">✕</button>
+      </div>
+      <p id="preview3dDesc">Spatial visualization in relation to Horizontal Plane (HP) and Vertical Plane (VP).</p>
+      <div id="preview3dHost" class="preview-3d-host"></div>
+      <div class="panel-foot">
+        Drag to orbit · Scroll to zoom · Right-drag to pan
+        <button type="button" id="closePreview3dBtn" class="primary" style="margin-left:auto; padding: 4px 12px; font-size: 12px;">Return to Drafting</button>
+      </div>
+    </dialog>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
