@@ -49,19 +49,16 @@ button.active {
   background: #ffffff;
   border-color: #ffffff;
   font-weight: 650;
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
 }
 button.primary {
   background: #ffffff;
   color: #000000;
   font-weight: 700;
   border: 1px solid #ffffff;
-  box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
 }
 button.primary:hover {
   background: #e6e6e6;
   color: #000000;
-  box-shadow: 0 0 32px rgba(255, 255, 255, 0.45);
 }
 button:disabled {
   opacity: 0.3;
@@ -97,7 +94,6 @@ header {
   color: #ffffff;
   font-size: 46px;
   line-height: 1;
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
 }
 .brandthin {
   font-weight: 350;
@@ -382,7 +378,6 @@ input[type="range"] {
   height: 6px;
   border-radius: 50%;
   margin-right: 7px;
-  box-shadow: 0 0 8px #ffffff;
 }
 .panels {
   display: grid;
@@ -475,7 +470,6 @@ input[type="range"] {
 .insight-icon {
   color: #ffffff;
   font-size: 25px;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
 }
 .insight strong {
   font-size: 14px;
@@ -615,7 +609,6 @@ dialog .primary {
   font-weight: 650;
   padding: 3px 9px;
   border-radius: 4px;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 .subtle-link-btn:hover {
   background: #e0e0e0;
@@ -624,7 +617,6 @@ dialog .primary {
 .step-box {
   border: 1px solid #262626;
   background: #050505;
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.03);
 }
 .step-title {
   font-size: 13.5px;
@@ -685,12 +677,10 @@ dialog .primary {
   color: #000000 !important;
   font-weight: 700 !important;
   border: 1px solid #ffffff !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25) !important;
 }
 .verify-btn:hover {
   background: #e5e5e5 !important;
   color: #000000 !important;
-  box-shadow: 0 0 28px rgba(255, 255, 255, 0.45) !important;
 }
 .ghost-btn {
   flex: 1;
@@ -710,7 +700,6 @@ dialog .primary {
   border-color: #ffffff;
   color: #000000;
   font-weight: 650;
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
 }
 .feedback-banner {
   margin-top: 10px;
@@ -724,7 +713,6 @@ dialog .primary {
   background: #111111;
   border: 1px solid #ffffff;
   color: #ffffff;
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.15);
 }
 .feedback-banner.error {
   background: rgba(245, 185, 93, 0.12);
@@ -817,7 +805,6 @@ dialog .primary {
   border-color: #ffffff;
   color: #000000;
   font-weight: 650;
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.3);
 }
 .tool-icon {
   font-size: 14px;
@@ -849,7 +836,6 @@ dialog .primary {
   color: #000000;
   background: #ffffff;
   font-weight: 650;
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
 }
 .cad-icon-btn {
   padding: 6px 10px;
@@ -934,7 +920,6 @@ dialog .primary {
   height: 7px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 8px #ffffff;
   display: inline-block;
   flex-shrink: 0;
 }
@@ -1048,7 +1033,6 @@ dialog .primary {
   padding: 2px 7px;
   border-radius: 4px;
   white-space: nowrap;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
   z-index: 10;
 }
 .canvas-hud {
