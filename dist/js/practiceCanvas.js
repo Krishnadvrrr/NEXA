@@ -639,7 +639,7 @@ export class PracticeCanvas {
     // Minor grid (subtle)
     if (this.zoom >= 0.7) {
       ctx.beginPath();
-      ctx.strokeStyle = "rgba(26, 40, 56, 0.45)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
       ctx.lineWidth = 0.5;
 
       const minorStartX = this.originX % minorStepPx;
@@ -658,7 +658,7 @@ export class PracticeCanvas {
 
     // Major grid (10 mm)
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(38, 58, 80, 0.7)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
     ctx.lineWidth = 1;
 
     for (let x = startX; x < w; x += majorStepPx) {
@@ -672,7 +672,7 @@ export class PracticeCanvas {
     ctx.stroke();
 
     // Subtle scale ruler numbers along edges
-    ctx.fillStyle = "rgba(110, 135, 155, 0.6)";
+    ctx.fillStyle = "rgba(180, 180, 180, 0.6)";
     ctx.font = "9px monospace";
     for (let x = startX; x < w; x += majorStepPx * 2) {
       const mmX = Math.round((x - this.originX) / scale);
@@ -716,17 +716,17 @@ export class PracticeCanvas {
   applyGradeStyle(ctx, grade) {
     switch (grade) {
       case "2H": // Thin continuous (projectors, construction)
-        ctx.strokeStyle = "#5d8193";
+        ctx.strokeStyle = "#666666";
         ctx.lineWidth = 1.0;
         ctx.setLineDash([]);
         break;
       case "HB": // Thick continuous (visible outlines)
-        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2.8;
         ctx.setLineDash([]);
         break;
       case "Hidden": // Medium dashed (invisible edges)
-        ctx.strokeStyle = "#8298a9";
+        ctx.strokeStyle = "#999999";
         ctx.lineWidth = 1.8;
         ctx.setLineDash([6, 4]);
         break;
@@ -741,7 +741,7 @@ export class PracticeCanvas {
         ctx.setLineDash([18, 4, 4, 4]);
         break;
       default:
-        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2.0;
         ctx.setLineDash([]);
     }
@@ -778,11 +778,11 @@ export class PracticeCanvas {
       }
     } else if (el.type === "text") {
       const p = this.worldToScreen(el.x, el.y);
-      ctx.fillStyle = "#e0f2fe";
+      ctx.fillStyle = "#ffffff";
       ctx.font = "italic 14px 'Segoe UI', serif";
       ctx.fillText(el.text, p.x + 4, p.y - 4);
       // Small dot at anchor
-      ctx.fillStyle = "#00f0ff";
+      ctx.fillStyle = "#ffffff";
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
@@ -824,7 +824,7 @@ export class PracticeCanvas {
   drawPreview(ctx) {
     ctx.save();
     this.applyGradeStyle(ctx, this.pencilGrade);
-    ctx.strokeStyle = "rgba(0, 240, 255, 0.75)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
     ctx.lineWidth = 2.0;
 
     const p1 = this.worldToScreen(this.dragStart.x, this.dragStart.y);
@@ -886,8 +886,8 @@ export class PracticeCanvas {
 
   drawSnapMarker(ctx, snap) {
     ctx.save();
-    ctx.strokeStyle = "#45d5b0";
-    ctx.fillStyle = "rgba(69, 213, 176, 0.25)";
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
     ctx.lineWidth = 1.8;
     ctx.setLineDash([]);
 

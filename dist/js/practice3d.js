@@ -24,12 +24,12 @@ export function createPractice3D(host) {
   controls.maxZoom = 6;
 
   // Scene lighting
-  scene.add(new THREE.HemisphereLight(0xb3faff, 0x172c43, 2.5));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x111111, 2.5));
   const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
   dirLight.position.set(120, 200, 160);
   scene.add(dirLight);
 
-  const fillLight = new THREE.DirectionalLight(0x45d5b0, 1.2);
+  const fillLight = new THREE.DirectionalLight(0xffffff, 1.2);
   fillLight.position.set(-100, 100, -100);
   scene.add(fillLight);
 
@@ -57,9 +57,9 @@ export function createPractice3D(host) {
     }
 
     const planeMat = new THREE.MeshBasicMaterial({
-      color: 0x18485e,
+      color: 0x111111,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.15,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
@@ -98,9 +98,9 @@ export function createPractice3D(host) {
       new THREE.Float32BufferAttribute(gridPoints, 3),
     );
     const gridMat = new THREE.LineBasicMaterial({
-      color: 0x1f3c4d,
+      color: 0x222222,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.6,
     });
     staticPlanesGroup.add(new THREE.LineSegments(gridGeo, gridMat));
 
@@ -119,12 +119,12 @@ export function createPractice3D(host) {
     createTextSprite(
       "HP (Horizontal Plane)",
       new THREE.Vector3(extent * 0.7, 0, extent * 1.1),
-      "#6fa3ba",
+      "#888888",
     );
     createTextSprite(
       "VP (Vertical Plane)",
       new THREE.Vector3(-extent * 0.7, extent * 1.1, 0),
-      "#6fa3ba",
+      "#888888",
     );
     createTextSprite(
       "X",
@@ -191,7 +191,7 @@ export function createPractice3D(host) {
 
     // Material definitions
     const solidMat = new THREE.MeshStandardMaterial({
-      color: 0x00d8e8,
+      color: 0xcccccc,
       metalness: 0.15,
       roughness: 0.35,
       transparent: true,
@@ -199,7 +199,7 @@ export function createPractice3D(host) {
       side: THREE.DoubleSide,
     });
     const lineMat = new THREE.LineBasicMaterial({
-      color: 0x4cf9ff,
+      color: 0xffffff,
       linewidth: 2,
     });
     const projMat = new THREE.LineDashedMaterial({
@@ -243,7 +243,7 @@ export function createPractice3D(host) {
         new THREE.Vector3(0, 1, 0),
         new THREE.Vector3(0, 0, centerZ),
         25,
-        0x00f0ff,
+        0xffffff,
         6,
         4,
       );
@@ -473,12 +473,12 @@ export function createPractice3D(host) {
     const strokeColors = [];
 
     const hexColor = (grade) => {
-      if (grade === "HB") return 0x00f0ff;
-      if (grade === "2H") return 0x5d8193;
+      if (grade === "HB") return 0xffffff;
+      if (grade === "2H") return 0x666666;
       if (grade === "Axis") return 0xf5b95d;
-      if (grade === "Hidden") return 0x8298a9;
+      if (grade === "Hidden") return 0x999999;
       if (grade === "Cutting Plane") return 0xff5370;
-      return 0x00f0ff;
+      return 0xffffff;
     };
 
     for (const el of drawnElements) {
@@ -585,9 +585,9 @@ export function createPractice3D(host) {
 
     // Lay flat on HP (rotation X = -90 deg)
     const mat = new THREE.MeshBasicMaterial({
-      color: 0x00f0ff,
+      color: 0xffffff,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0.15,
       side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geo, mat);
@@ -595,10 +595,10 @@ export function createPractice3D(host) {
     mesh.position.set(0, 0.2, centerZ);
     group.add(mesh);
 
-    // Glowing border outline
+    // Border outline
     const wireGeo = new THREE.EdgesGeometry(geo);
     const wireMat = new THREE.LineBasicMaterial({
-      color: 0x00f0ff,
+      color: 0xffffff,
       linewidth: 2.5,
     });
     const wire = new THREE.LineSegments(wireGeo, wireMat);

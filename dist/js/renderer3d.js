@@ -12,7 +12,7 @@ export function createRenderer(host) {
   controls.maxZoom = 8;
   const group = new THREE.Group();
   scene.add(group);
-  scene.add(new THREE.HemisphereLight(0xb3faff, 0x172c43, 2));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x111111, 2));
   const light = new THREE.DirectionalLight(0xffffff, 3);
   light.position.set(100, 250, 200);
   scene.add(light);
@@ -21,7 +21,7 @@ export function createRenderer(host) {
     preset = "iso",
     dirty = true,
     disposed = false;
-  function label(value, position, color = "#8aafc0") {
+  function label(value, position, color = "#888888") {
     const canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 64;
@@ -70,9 +70,9 @@ export function createRenderer(host) {
       new THREE.Mesh(
         geometry,
         new THREE.MeshStandardMaterial({
-          color: 0x127f8e,
-          metalness: 0.25,
-          roughness: 0.42,
+          color: 0xcccccc,
+          metalness: 0.15,
+          roughness: 0.35,
           transparent: true,
           opacity: 0.88,
           side: THREE.DoubleSide,
@@ -83,7 +83,7 @@ export function createRenderer(host) {
     group.add(
       new THREE.LineSegments(
         eg,
-        new THREE.LineBasicMaterial({ color: 0x4cf9ff }),
+        new THREE.LineBasicMaterial({ color: 0xffffff }),
       ),
     );
     const box = new THREE.Box3().setFromPoints(
@@ -93,9 +93,9 @@ export function createRenderer(host) {
     const size = box.getSize(new THREE.Vector3());
     extent = Math.max(100, size.x, size.y, size.z, box.max.y, box.max.z) * 1.18;
     const planeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x287f9b,
+      color: 0x111111,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.1,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
@@ -125,9 +125,9 @@ export function createRenderer(host) {
       new THREE.LineSegments(
         grid,
         new THREE.LineBasicMaterial({
-          color: 0x264250,
+          color: 0x222222,
           transparent: true,
-          opacity: 0.5,
+          opacity: 0.6,
         }),
       ),
     );
