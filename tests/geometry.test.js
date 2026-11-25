@@ -7,7 +7,6 @@ import {
   sub,
   viewEdges,
 } from "../dist/js/geometry.js";
-import { curvePoint, curveDrawing } from "../dist/js/curves.js";
 import { solidDrawing } from "../dist/js/drafting.js";
 import { sheetSVG } from "../dist/js/export.js";
 const state = {
@@ -91,54 +90,18 @@ test("orthographic directions identify visible and hidden convex edges", () => {
     assert.ok(edges.some((e) => !e.visible));
   }
 });
-test("conic points satisfy focus/directrix definition", () => {
-  for (const [type, e] of [
-    ["ellipse", 0.65],
-    ["parabola", 1],
-    ["hyperbola", 1.5],
-  ])
-    for (let i = 0; i <= 100; i++) {
-      const [x, y] = curvePoint(type, i / 100, 35, e, 25);
-      assert.ok(Math.abs(Math.hypot(x - 35, y) - e * Math.abs(x)) < 1e-8);
-    }
-});
-test("rolling curves meet analytic endpoints", () => {
-  const r = 25;
-  assert.deepEqual(curvePoint("cycloid", 0, 0, 0, r), [0, 0]);
-  const p = curvePoint("cycloid", 1, 0, 0, r);
-  assert.ok(Math.abs(p[0] - 2 * Math.PI * r) < 1e-8);
-  assert.ok(Math.abs(p[1]) < 1e-8);
-  const inv = curvePoint("involute", 1, 0, 0, r);
-  assert.ok(Math.abs(inv[0] - r) < 1e-8);
-  assert.ok(Math.abs(inv[1] + 2 * Math.PI * r) < 1e-8);
-});
-test("curves and sheet export contain finite coordinates and escaped user content", () => {
-  for (const curve of [
-    "ellipse",
-    "parabola",
-    "hyperbola",
-    "cycloid",
-    "involute",
-  ]) {
-    const d = curveDrawing({
-      ...state,
-      curve,
-      distance: 35,
-      ecc: curve === "hyperbola" ? 1.5 : 0.65,
-      radius: 25,
-      point: 0,
-      progress: 100,
-      tangent: true,
-    });
-    assert.ok(!/NaN|Infinity/.test(d.body));
-    const svg = sheetSVG(d, {
-      paper: "A4",
-      mode: "curve",
-      title: "<script>&",
-      name: "A&B",
-    });
-    assert.ok(svg.includes("&lt;script&gt;&amp;"));
-    assert.ok(!svg.includes("<script>"));
-    assert.ok(svg.includes('width="297mm"'));
-  }
+test("solid drawing and sheet export contain finite coordinates and escaped user content", () => {
+  const m = buildSolid({ ...state, solid: "hexPrism", alpha: 45, beta: 20 });
+  const d = solidDrawing(m, { ...state, solid: "hexPrism" });
+  assert.ok(!/NaN|Infinity/.test(d.body));
+  const svg = sheetSVG(d, {
+    paper: "A4",
+    mode: "solid",
+    title: "<script>&",
+    name: "A&B",
+  });
+  assert.ok(svg.includes("&lt;script&gt;&amp;"));
+  assert.ok(!svg.includes("<script>"));
+  assert.ok(svg.includes('width="297mm"'));
+  assert.ok(svg.includes("FIRST ANGLE"));
 });

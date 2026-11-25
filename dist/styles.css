@@ -551,18 +551,6 @@ dialog .primary {
 [hidden] {
   display: none !important;
 }
-.curve-mode .model-panel {
-  display: none;
-}
-.curve-mode .panels {
-  grid-template-columns: 1fr;
-}
-.curve-mode .drawing-host {
-  height: 550px;
-}
-.curve-mode #presets {
-  opacity: 0.4;
-}
 .practice-mode .panels,
 .practice-mode .insight {
   display: none !important;

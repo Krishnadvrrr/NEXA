@@ -1,6 +1,5 @@
 import { buildSolid } from "./js/geometry.js";
 import { solidDrawing, drawingStyles } from "./js/drafting.js";
-import { curveDrawing } from "./js/curves.js";
 import { downloadSheet, practiceDrawing } from "./js/export.js";
 import { QUESTIONS, TOPICS } from "./js/data/questions.js";
 import { validateStep } from "./js/stepValidator.js";
@@ -25,13 +24,6 @@ const defaults = {
   beta: 20,
   roll: 0,
   side: "right",
-  curve: "ellipse",
-  distance: 35,
-  ecc: 0.65,
-  radius: 25,
-  progress: 100,
-  point: 40,
-  tangent: true,
   construction: true,
   hidden: true,
   labels: true,
@@ -43,8 +35,6 @@ let state = { ...defaults },
   model,
   drawing,
   pending = false,
-  playing = false,
-  previous = 0,
   lastSave = 0,
   modelKey = "";
 
@@ -65,29 +55,24 @@ try {
 } catch {}
 
 function normalize() {
-  for (const key of ["size", "height", "distance", "radius"])
+  for (const key of ["size", "height"])
     state[key] = Math.min(
-      key === "height" ? 200 : key === "radius" ? 100 : 150,
+      key === "height" ? 200 : 150,
       Math.max(1, Number.isFinite(state[key]) ? state[key] : defaults[key]),
     );
-  for (const key of ["alpha", "beta", "roll", "progress", "point"])
+  for (const key of ["alpha", "beta", "roll"])
     state[key] = Math.max(
       0,
       Math.min(
-        key === "roll" ? 180 : ["alpha", "beta"].includes(key) ? 90 : 100,
+        key === "roll" ? 180 : 90,
         Number.isFinite(state[key]) ? state[key] : defaults[key],
       ),
     );
   state.beta = Math.min(state.beta, 90 - state.alpha);
-  for (const key of ["solid", "side", "curve"])
+  for (const key of ["solid", "side"])
     if (![...$(key).options].some((o) => o.value === state[key]))
       state[key] = defaults[key];
-  if (!["solid", "curve", "practice"].includes(state.mode)) state.mode = "solid";
-  state.ecc =
-    state.curve === "hyperbola"
-      ? Math.max(1.05, Math.min(3, state.ecc))
-      : Math.max(0.1, Math.min(0.95, state.ecc));
-  if (!Number.isFinite(state.ecc)) state.ecc = 0.65;
+  if (!["solid", "practice"].includes(state.mode)) state.mode = "solid";
 }
 normalize();
 
@@ -99,18 +84,14 @@ function sync() {
       else el.value = value;
     }
   }
-  for (const key of ["alpha", "beta", "roll", "progress", "point"])
-    $(key + "Value").textContent =
-      state[key].toFixed(0) + (["progress", "point"].includes(key) ? "%" : "°");
+  for (const key of ["alpha", "beta", "roll"])
+    $(key + "Value").textContent = state[key].toFixed(0) + "°";
 
-  const curve = state.mode === "curve";
   const practice = state.mode === "practice";
 
-  document.body.classList.toggle("curve-mode", curve);
   document.body.classList.toggle("practice-mode", practice);
 
-  $("solidControls").hidden = curve || practice;
-  $("curveControls").hidden = !curve;
+  $("solidControls").hidden = practice;
   $("practiceControls").hidden = !practice;
 
   const layerCtrl = $("layerControls");
@@ -141,23 +122,6 @@ function sync() {
         livePractice3D?.resize();
       }, 10);
     }
-  } else if (curve) {
-    $("modeTitle").textContent = "Engineering curves";
-    $("modeDescription").textContent = "";
-    $("workspaceTitle").textContent = "Engineering curves";
-    $("drawingTitle").innerHTML = "Curve construction <span>2D</span>";
-    $("drawingTag").textContent = "PARAMETRIC CONSTRUCTION";
-    document.querySelectorAll("[data-view]").forEach((b) => (b.disabled = true));
-    const rolling = ["cycloid", "involute"].includes(state.curve);
-    $("distanceLabel").hidden = rolling;
-    $("eccLabel").hidden = rolling || state.curve === "parabola";
-    $("radiusLabel").hidden = !rolling;
-    $("hidden").closest("label").hidden = curve;
-    $("ecc").min = state.curve === "hyperbola" ? 1.05 : 0.1;
-    $("ecc").max = state.curve === "hyperbola" ? 3 : 0.95;
-    $("angleStatus").textContent = rolling
-      ? `r ${state.radius} mm · ${state.curve}`
-      : `e ${state.curve === "parabola" ? 1 : state.ecc} · ${state.curve}`;
   } else {
     $("modeTitle").textContent = "Solid projections";
     $("modeDescription").textContent = "";
@@ -191,36 +155,25 @@ function render() {
     return;
   }
 
-  if (state.mode === "solid") {
-    const key = [
-      state.solid,
-      state.size,
-      state.height,
-      state.alpha,
-      state.beta,
-      state.roll,
-    ].join(":");
-    if (key !== modelKey) {
-      model = buildSolid(state);
-      renderer?.update(model);
-      modelKey = key;
-    }
-    drawing = solidDrawing(model, state);
-    $("insightTitle").textContent = "Follow the projectors";
-    $("insightText").textContent =
-      "Front and top share width. Front and side share height. Dimensions show projected overall extents, not true sloping lengths.";
-    $("drawingFoot").innerHTML =
-      `FV above XY · TV below XY <span>${state.side === "right" ? "Right-side view on the left" : "Left-side view on the right"}</span>`;
-  } else {
-    drawing = curveDrawing(state);
-    $("insightTitle").textContent =
-      state.curve.charAt(0).toUpperCase() +
-      state.curve.slice(1) +
-      " construction";
-    $("insightText").textContent = drawing.description;
-    $("drawingFoot").innerHTML =
-      "Amber: tangent / construction <span>Violet: normal · Click curve to inspect</span>";
+  const key = [
+    state.solid,
+    state.size,
+    state.height,
+    state.alpha,
+    state.beta,
+    state.roll,
+  ].join(":");
+  if (key !== modelKey) {
+    model = buildSolid(state);
+    renderer?.update(model);
+    modelKey = key;
   }
+  drawing = solidDrawing(model, state);
+  $("insightTitle").textContent = "Follow the projectors";
+  $("insightText").textContent =
+    "Front and top share width. Front and side share height. Dimensions show projected overall extents, not true sloping lengths.";
+  $("drawingFoot").innerHTML =
+    `FV above XY · TV below XY <span>${state.side === "right" ? "Right-side view on the left" : "Left-side view on the right"}</span>`;
 
   $("drawing").innerHTML = drawingStyles() + drawing.body;
   if (performance.now() - lastSave > 500) {
@@ -236,7 +189,7 @@ function schedule() {
   }
 }
 
-// Solid & Curve controls listener setup
+// Solid controls listener setup
 for (const key of Object.keys(defaults)) {
   const el = $(key);
   if (!el) continue;
@@ -256,12 +209,6 @@ for (const key of Object.keys(defaults)) {
           "The other inclination was adjusted: true axis inclinations must satisfy α + β ≤ 90°.";
       } else $("notice").textContent = "";
     }
-    if (key === "curve") {
-      state.ecc = state.curve === "hyperbola" ? 1.5 : 0.65;
-      state.progress = 100;
-      stop();
-    }
-    if (key === "progress") stop();
     schedule();
   });
   if (el.type === "number")
@@ -284,7 +231,6 @@ document.querySelectorAll(".mode").forEach(
   (b) =>
     (b.onclick = () => {
       state.mode = b.dataset.mode;
-      stop();
       schedule();
       setTimeout(() => {
         renderer?.resize();
@@ -315,51 +261,11 @@ $("collapse").onclick = () => {
 };
 
 $("reset").onclick = () => {
-  stop();
   state = { ...defaults, mode: state.mode };
   render();
   renderer?.view("iso");
   $("notice").textContent = "Workspace reset.";
   save();
-};
-
-function stop() {
-  playing = false;
-  $("play").textContent = "▶ Animate";
-}
-
-function tick(now) {
-  if (!playing) return;
-  if (previous) {
-    state.progress = Math.min(100, state.progress + (now - previous) / 100);
-    state.point = state.progress;
-    schedule();
-  }
-  previous = now;
-  if (state.progress >= 100) {
-    stop();
-    save();
-  } else requestAnimationFrame(tick);
-}
-
-$("play").onclick = () => {
-  if (playing) {
-    stop();
-    return;
-  }
-  playing = true;
-  if (state.progress >= 100) state.progress = 0;
-  previous = 0;
-  $("play").textContent = "Ⅱ Pause";
-  requestAnimationFrame(tick);
-};
-
-$("step").onclick = () => {
-  stop();
-  state.progress =
-    state.progress >= 100 ? 0 : Math.min(100, state.progress + 100 / 12);
-  state.point = state.progress;
-  schedule();
 };
 
 function svgPoint(event) {
@@ -368,30 +274,14 @@ function svgPoint(event) {
 }
 
 $("drawing").addEventListener("pointermove", (e) => {
+  if (!drawing?.scale) return;
   const p = svgPoint(e);
   $("coordinates").textContent =
     `SHEET X ${(p.x / drawing.scale).toFixed(1)} · Y ${(p.y / drawing.scale).toFixed(1)} mm`;
 });
 
-$("drawing").addEventListener("click", (e) => {
-  if (state.mode !== "curve") return;
-  const p = svgPoint(e);
-  let best = Infinity,
-    index = 0;
-  drawing.samples.forEach((q, i) => {
-    const d = Math.hypot(q[0] - p.x, q[1] - p.y);
-    if (d < best) {
-      best = d;
-      index = i;
-    }
-  });
-  state.point = index / 4;
-  schedule();
-});
-
 // Export sheet dialog
 $("export").onclick = () => {
-  stop();
   $("exportDialog").showModal();
 };
 $("closeDialog").onclick = () => $("exportDialog").close();
@@ -426,10 +316,6 @@ window.addEventListener("pagehide", () => {
   renderer?.dispose();
   preview3dRenderer?.dispose();
   livePractice3D?.dispose();
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) stop();
 });
 
 window.addEventListener("resize", () => {
