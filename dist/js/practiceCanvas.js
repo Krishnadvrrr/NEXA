@@ -1,8 +1,162 @@
 /**
  * Scaled Drafting Canvas Engine for Engineering Graphics Practice Studio
  * True-to-scale coordinate mapping (1 mm = 4 px baseline), CAD toolset,
- * millimeter blueprint grid, glowing vertex snap engine, and live HUD.
+ * millimeter blueprint grid, vertex & polar snap engine, live protractor HUD,
+ * angle/length locking, and click-click + click-drag hybrid drafting.
  */
+
+const normalizeDeg = (d) => ((d % 360) + 360) % 360;
+const angDiffDeg = (a, b) => {
+  const diff = Math.abs(normalizeDeg(a) - normalizeDeg(b));
+  return Math.min(diff, 360 - diff);
+};
+
+/**
+ * Pure polar constraint solver (unit-tested).
+ * Computes final endpoint world coordinates under ortho lock, explicit angle lock
+ * (XY or Edge-relative), explicit length lock, and magnetic polar angle snapping.
+ */
+export function computePolarConstraint(fromWorld, toWorld, opts = {}) {
+  const dx = toWorld.x - fromWorld.x;
+  const dy = toWorld.y - fromWorld.y;
+  const rawLen = Math.hypot(dx, dy);
+  const lockedLen = Number(opts.lockedLengthMm) > 0 ? Number(opts.lockedLengthMm) : null;
+
+  if (rawLen < 0.05 && !lockedLen) {
+    return { point: toWorld, snappedInfo: null };
+  }
+
+  const targetLen = lockedLen || rawLen;
+  const rawDeg = rawLen >= 0.05 ? normalizeDeg((Math.atan2(dy, dx) * 180) / Math.PI) : 0;
+
+  // 1. Ortho lock (Shift)
+  if (opts.orthoLock) {
+    const orthoCandidates = [0, 90, 180, 270];
+    let best = 0;
+    let bestD = Infinity;
+    for (const c of orthoCandidates) {
+      const d = angDiffDeg(rawDeg, c);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    const rad = (best * Math.PI) / 180;
+    return {
+      point: { x: fromWorld.x + targetLen * Math.cos(rad), y: fromWorld.y + targetLen * Math.sin(rad) },
+      snappedInfo: { deg: best, label: `ORTHO ${best}°`, mode: "ortho" }
+    };
+  }
+
+  // 2. Explicit Angle Lock (∠ Lock)
+  if (opts.lockedAngleDeg !== null && opts.lockedAngleDeg !== undefined && Number.isFinite(Number(opts.lockedAngleDeg))) {
+    const a = Number(opts.lockedAngleDeg);
+    let candidates;
+    let labelSuffix = "";
+
+    if (opts.angleRelativeTo === "edge" && Number.isFinite(opts.refEdgeAngleDeg)) {
+      const ref = opts.refEdgeAngleDeg;
+      candidates = [ref + a, ref - a, ref + 180 + a, ref + 180 - a].map(normalizeDeg);
+      labelSuffix = ` (to edge)`;
+    } else if (a >= 0 && a <= 90) {
+      candidates = [a, 180 - a, 180 + a, 360 - a].map(normalizeDeg);
+    } else {
+      candidates = [a, a + 180].map(normalizeDeg);
+    }
+
+    let best = candidates[0];
+    let bestD = Infinity;
+    for (const c of candidates) {
+      const d = angDiffDeg(rawDeg, c);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    const rad = (best * Math.PI) / 180;
+    return {
+      point: { x: fromWorld.x + targetLen * Math.cos(rad), y: fromWorld.y + targetLen * Math.sin(rad) },
+      snappedInfo: { deg: best, label: `LOCK ${Math.abs(a)}°${labelSuffix}`, mode: "lock" }
+    };
+  }
+
+  // 3. Polar Angle Snap (15° increments + key edge-relative angles 45°, 90°, 30°, 60°)
+  if (opts.angleSnap) {
+    const snapWindow = 4.2;
+    let best = null;
+    let bestD = snapWindow;
+    let bestLabel = "";
+
+    // Edge-relative key angles when started on an inclined edge
+    if (Number.isFinite(opts.refEdgeAngleDeg) && Math.abs(opts.refEdgeAngleDeg % 90) > 1.5) {
+      const ref = opts.refEdgeAngleDeg;
+      for (const rel of [0, 30, 45, 60, 90, 120, 135, 150, 180, 210, 225, 240, 270, 300, 315, 330]) {
+        const cand = normalizeDeg(ref + rel);
+        const d = angDiffDeg(rawDeg, cand);
+        if (d < bestD) {
+          bestD = d;
+          best = cand;
+          const acuteRel = rel > 180 ? 360 - rel : rel;
+          const displayRel = acuteRel > 90 ? 180 - acuteRel : acuteRel;
+          bestLabel = displayRel === 90 ? "90° ⊥ edge" : displayRel === 0 ? "∥ edge" : `${displayRel}° to edge`;
+        }
+      }
+    }
+
+    // Standard 15° global snaps (slightly preferred on ties)
+    for (let target = 0; target < 360; target += 15) {
+      const d = angDiffDeg(rawDeg, target);
+      if (d <= bestD + 0.3 && d < snapWindow) {
+        bestD = d;
+        best = target;
+        bestLabel = `${target}° SNAP`;
+      }
+    }
+
+    if (best !== null) {
+      const rad = (best * Math.PI) / 180;
+      return {
+        point: { x: fromWorld.x + targetLen * Math.cos(rad), y: fromWorld.y + targetLen * Math.sin(rad) },
+        snappedInfo: { deg: best, label: bestLabel, mode: "snap" }
+      };
+    }
+  }
+
+  // 4. Length-only lock or completely free
+  const rad = (rawDeg * Math.PI) / 180;
+  return {
+    point: lockedLen
+      ? { x: fromWorld.x + targetLen * Math.cos(rad), y: fromWorld.y + targetLen * Math.sin(rad) }
+      : toWorld,
+    snappedInfo: null
+  };
+}
+
+/**
+ * Parses AutoCAD-style dynamic keyboard entry while drawing:
+ * e.g. "50<45", "@30<135", "<45", "50"
+ */
+export function parseDynamicEntry(raw) {
+  const s = String(raw || "").trim().replace(/^@/, "");
+  if (!s) return null;
+
+  const polar = s.match(/^(\d+(?:\.\d+)?)\s*<\s*(-?\d+(?:\.\d+)?)$/);
+  if (polar) {
+    return { length: parseFloat(polar[1]), angle: parseFloat(polar[2]) };
+  }
+
+  const angleOnly = s.match(/^<\s*(-?\d+(?:\.\d+)?)$/);
+  if (angleOnly) {
+    return { length: null, angle: parseFloat(angleOnly[1]) };
+  }
+
+  const lenOnly = s.match(/^(\d+(?:\.\d+)?)$/);
+  if (lenOnly) {
+    return { length: parseFloat(lenOnly[1]), angle: null };
+  }
+
+  return null;
+}
 
 export class PracticeCanvas {
   constructor(canvas, hudElement, snapHudElement) {
@@ -22,6 +176,11 @@ export class PracticeCanvas {
     this.pencilGrade = "HB"; // 2H, HB, Hidden, Axis, Cutting Plane, Dimension
     this.orthoLock = false;
     this.angleSnap = true;
+    this.lockedAngleDeg = null;
+    this.angleRelativeTo = "xy"; // "xy" | "edge"
+    this.lockedLengthMm = null;
+    this.refEdgeAngleDeg = null;
+    this.snappedAngleInfo = null;
     this.showGhostGuide = false;
     this.ghostElements = [];
 
@@ -34,6 +193,9 @@ export class PracticeCanvas {
 
     // Interaction state
     this.isDrawing = false;
+    this.clickClickActive = false;
+    this.pointerDownScreen = null;
+    this.typedCommandBuffer = "";
     this.isPanning = false;
     this.panStartX = 0;
     this.panStartY = 0;
@@ -152,41 +314,58 @@ export class PracticeCanvas {
     return bestSnap;
   }
 
-  // Ortho & Angle Snapping
-  applyAngleConstraints(fromWorld, toWorld) {
-    let dx = toWorld.x - fromWorld.x;
-    let dy = toWorld.y - fromWorld.y;
-    const len = Math.hypot(dx, dy);
-    if (len < 0.1) return toWorld;
-
-    if (this.orthoLock) {
-      // Strict 0° or 90°
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        return { x: toWorld.x, y: fromWorld.y };
-      } else {
-        return { x: fromWorld.x, y: toWorld.y };
-      }
-    }
-
-    if (this.angleSnap) {
-      let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-      if (deg < 0) deg += 360;
-
-      // Common EG drafting angles: 0, 15, 30, 45, 60, 75, 90, 120, 135, 150, 180...
-      const snapAngles = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180,
-                          195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345, 360];
-      for (const target of snapAngles) {
-        if (Math.abs(deg - target) < 2.5) {
-          const rad = (target * Math.PI) / 180;
-          return {
-            x: fromWorld.x + len * Math.cos(rad),
-            y: fromWorld.y + len * Math.sin(rad)
-          };
+  findReferenceEdgeAngle(wx, wy) {
+    const tol = 2.5;
+    if (Math.abs(wy) < tol) return 0;
+    for (let i = this.elements.length - 1; i >= 0; i--) {
+      const el = this.elements[i];
+      if (el.type === "line") {
+        if (distToSegment({ x: wx, y: wy }, { x: el.x1, y: el.y1 }, { x: el.x2, y: el.y2 }) < tol) {
+          return normalizeDeg((Math.atan2(el.y2 - el.y1, el.x2 - el.x1) * 180) / Math.PI);
+        }
+      } else if (el.type === "polygon" && el.points) {
+        for (let j = 0; j < el.points.length; j++) {
+          const a = el.points[j];
+          const b = el.points[(j + 1) % el.points.length];
+          if (distToSegment({ x: wx, y: wy }, { x: a[0], y: a[1] }, { x: b[0], y: b[1] }) < tol) {
+            return normalizeDeg((Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI);
+          }
         }
       }
     }
+    return null;
+  }
 
-    return toWorld;
+  // Ortho, Polar Lock & Angle Snapping
+  applyAngleConstraints(fromWorld, toWorld) {
+    const res = computePolarConstraint(fromWorld, toWorld, {
+      orthoLock: this.orthoLock,
+      angleSnap: this.angleSnap,
+      lockedAngleDeg: this.lockedAngleDeg,
+      angleRelativeTo: this.angleRelativeTo,
+      refEdgeAngleDeg: this.refEdgeAngleDeg,
+      lockedLengthMm: this.lockedLengthMm
+    });
+    this.snappedAngleInfo = res.snappedInfo;
+    return res.point;
+  }
+
+  cancelDrawing() {
+    this.isDrawing = false;
+    this.clickClickActive = false;
+    this.dragStart = null;
+    this.refEdgeAngleDeg = null;
+    this.snappedAngleInfo = null;
+    this.typedCommandBuffer = "";
+    this.onPreviewChanged?.({
+      worldPos: this.currentWorldPos,
+      isDrawing: false,
+      dragStart: null,
+      tool: this.tool,
+      pencilGrade: this.pencilGrade,
+      activeSnap: this.activeSnap
+    });
+    this.render();
   }
 
   // Event handlers
@@ -200,12 +379,60 @@ export class PracticeCanvas {
     this.canvas.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
-    // Keyboard shortcuts (Undo, Redo, Ortho Shift)
+    // Keyboard shortcuts (Undo, Redo, Ortho Shift, Escape, Direct Polar Input 50<45)
     window.addEventListener("keydown", (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
       if (e.key === "Shift") {
         this.orthoLock = true;
         this.render();
+      }
+      if (e.key === "Escape") {
+        if (this.typedCommandBuffer) {
+          this.typedCommandBuffer = "";
+          this.render();
+        } else if (this.isDrawing) {
+          this.cancelDrawing();
+        }
+        return;
+      }
+      if (this.isDrawing && this.dragStart && (this.tool === "line" || this.tool === "projector" || this.tool === "circle" || this.tool === "dimension")) {
+        if (/^[0-9.<\-]$/.test(e.key)) {
+          e.preventDefault();
+          this.typedCommandBuffer += e.key;
+          this.render();
+          return;
+        }
+        if (e.key === "Backspace" && this.typedCommandBuffer.length > 0) {
+          e.preventDefault();
+          this.typedCommandBuffer = this.typedCommandBuffer.slice(0, -1);
+          this.render();
+          return;
+        }
+        if (e.key === "Enter" && this.typedCommandBuffer.length > 0) {
+          e.preventDefault();
+          const parsed = parseDynamicEntry(this.typedCommandBuffer);
+          this.typedCommandBuffer = "";
+          if (parsed) {
+            const dx = this.currentWorldPos.x - this.dragStart.x;
+            const dy = this.currentWorldPos.y - this.dragStart.y;
+            const curLen = Math.hypot(dx, dy) || 30;
+            const curRad = Math.atan2(dy, dx);
+            const len = parsed.length !== null ? parsed.length : curLen;
+            let rad = curRad;
+            if (parsed.angle !== null) {
+              const deg = this.angleRelativeTo === "edge" && Number.isFinite(this.refEdgeAngleDeg)
+                ? this.refEdgeAngleDeg + parsed.angle
+                : parsed.angle;
+              rad = (deg * Math.PI) / 180;
+            }
+            const targetEnd = {
+              x: this.dragStart.x + len * Math.cos(rad),
+              y: this.dragStart.y + len * Math.sin(rad)
+            };
+            this.commitSegment(this.dragStart, targetEnd);
+            return;
+          }
+        }
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
@@ -235,6 +462,12 @@ export class PracticeCanvas {
 
   onPointerDown(e) {
     const pos = this.getPointerPos(e);
+
+    // Right-click cancels active click-click drawing
+    if (e.button === 2 && this.isDrawing) {
+      this.cancelDrawing();
+      return;
+    }
 
     // Pan with middle click, Space+click, or Pan tool
     if (e.button === 1 || this.tool === "pan" || e.spaceKey) {
@@ -266,9 +499,28 @@ export class PracticeCanvas {
       return;
     }
 
+    // Second click in click-click mode completes segment
+    if (this.isDrawing && this.clickClickActive && this.dragStart) {
+      if (this.tool === "projector") {
+        const dx = Math.abs(worldPos.x - this.dragStart.x);
+        const dy = Math.abs(worldPos.y - this.dragStart.y);
+        if (dx < dy) worldPos.x = this.dragStart.x;
+        else worldPos.y = this.dragStart.y;
+      } else if (this.tool === "line" || this.tool === "dimension") {
+        worldPos = this.applyAngleConstraints(this.dragStart, worldPos);
+      }
+      this.commitSegment(this.dragStart, worldPos);
+      return;
+    }
+
     // Start drawing line, circle, projector, dimension
     this.isDrawing = true;
+    this.clickClickActive = false;
+    this.pointerDownScreen = { x: pos.x, y: pos.y };
     this.dragStart = worldPos;
+    this.refEdgeAngleDeg = this.findReferenceEdgeAngle(worldPos.x, worldPos.y);
+    this.snappedAngleInfo = null;
+    this.typedCommandBuffer = "";
     this.currentWorldPos = worldPos;
   }
 
@@ -299,6 +551,7 @@ export class PracticeCanvas {
         } else {
           worldPos.y = this.dragStart.y;
         }
+        this.snappedAngleInfo = { deg: dx < dy ? 90 : 0, label: "PROJECTOR", mode: "ortho" };
       } else if (this.tool === "line" || this.tool === "dimension") {
         worldPos = this.applyAngleConstraints(this.dragStart, worldPos);
       }
@@ -328,12 +581,31 @@ export class PracticeCanvas {
       return;
     }
 
-    if (!this.isDrawing) return;
-    this.isDrawing = false;
+    if (!this.isDrawing || !this.dragStart) return;
 
-    if (!this.dragStart) return;
-    const start = this.dragStart;
-    let end = this.currentWorldPos;
+    const pos = this.getPointerPos(e);
+    const movedPx = this.pointerDownScreen
+      ? Math.hypot(pos.x - this.pointerDownScreen.x, pos.y - this.pointerDownScreen.y)
+      : 999;
+
+    // If user clicked cleanly (< 5 px drag), switch into Click-Click mode so they can aim angles effortlessly without holding LMB!
+    if (movedPx < 5 && !this.clickClickActive) {
+      this.clickClickActive = true;
+      return;
+    }
+
+    // If finishing a click-drag gesture
+    if (!this.clickClickActive) {
+      this.commitSegment(this.dragStart, this.currentWorldPos);
+    }
+  }
+
+  commitSegment(start, end) {
+    this.isDrawing = false;
+    this.clickClickActive = false;
+    this.typedCommandBuffer = "";
+    this.refEdgeAngleDeg = null;
+    this.snappedAngleInfo = null;
 
     const len = Math.hypot(end.x - start.x, end.y - start.y);
     if (len < 0.5 && this.tool !== "circle") {
@@ -346,6 +618,7 @@ export class PracticeCanvas {
         pencilGrade: this.pencilGrade,
         activeSnap: this.activeSnap
       });
+      this.render();
       return;
     }
 
@@ -856,22 +1129,162 @@ export class PracticeCanvas {
   drawPreview(ctx) {
     ctx.save();
     this.applyGradeStyle(ctx, this.pencilGrade);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
     ctx.lineWidth = 2.0;
 
     const p1 = this.worldToScreen(this.dragStart.x, this.dragStart.y);
     const p2 = this.worldToScreen(this.currentWorldPos.x, this.currentWorldPos.y);
+    const dx = this.currentWorldPos.x - this.dragStart.x;
+    const dy = this.currentWorldPos.y - this.dragStart.y;
+    const lenMm = Math.hypot(dx, dy);
+    const deg = normalizeDeg((Math.atan2(dy, dx) * 180) / Math.PI);
 
     if (this.tool === "line" || this.tool === "projector" || this.tool === "dimension") {
+      // 1. Subtle Protractor Reference Cross & Degree Ticks around p1
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x - 52, p1.y);
+      ctx.lineTo(p1.x + 52, p1.y);
+      ctx.moveTo(p1.x, p1.y - 52);
+      ctx.lineTo(p1.x, p1.y + 52);
+      ctx.stroke();
+
+      // Subtle protractor ring every 15° around p1
+      const dialR = 34;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+      ctx.beginPath();
+      ctx.arc(p1.x, p1.y, dialR, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let t = 0; t < 360; t += 15) {
+        const tr = (t * Math.PI) / 180;
+        const inner = t % 45 === 0 ? dialR - 6 : dialR - 3;
+        ctx.beginPath();
+        ctx.moveTo(p1.x + inner * Math.cos(tr), p1.y - inner * Math.sin(tr));
+        ctx.lineTo(p1.x + dialR * Math.cos(tr), p1.y - dialR * Math.sin(tr));
+        ctx.stroke();
+      }
+
+      // If snapped to an existing inclined edge, render faint reference axis along that edge
+      if (this.refEdgeAngleDeg !== null && Math.abs(this.refEdgeAngleDeg % 90) > 1.5) {
+        const refRad = (this.refEdgeAngleDeg * Math.PI) / 180;
+        ctx.strokeStyle = "rgba(245, 185, 93, 0.35)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(p1.x - 65 * Math.cos(refRad), p1.y + 65 * Math.sin(refRad));
+        ctx.lineTo(p1.x + 65 * Math.cos(refRad), p1.y - 65 * Math.sin(refRad));
+        ctx.stroke();
+      }
+
+      // 2. Polar Alignment Extension Ray when locked or snapped
+      if (this.snappedAngleInfo) {
+        const sRad = (this.snappedAngleInfo.deg * Math.PI) / 180;
+        ctx.strokeStyle = "rgba(245, 185, 93, 0.32)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p1.x + 500 * Math.cos(sRad), p1.y - 500 * Math.sin(sRad));
+        ctx.stroke();
+      }
+
+      // 3. Swept Angle Arc between reference baseline and active segment
+      if (lenMm > 1.5) {
+        let refBase = dx >= 0 ? 0 : 180;
+        if (this.angleRelativeTo === "edge" && this.refEdgeAngleDeg !== null) {
+          refBase = angDiffDeg(deg, this.refEdgeAngleDeg) <= angDiffDeg(deg, this.refEdgeAngleDeg + 180)
+            ? this.refEdgeAngleDeg
+            : normalizeDeg(this.refEdgeAngleDeg + 180);
+        }
+        const delta = ((deg - refBase + 540) % 360) - 180;
+        const arcR = Math.min(28, Math.max(14, Math.hypot(p2.x - p1.x, p2.y - p1.y) * 0.45));
+        ctx.strokeStyle = this.snappedAngleInfo ? "#f5b95d" : "rgba(245, 185, 93, 0.75)";
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        for (let s = 0; s <= 24; s++) {
+          const a = ((refBase + (delta * s) / 24) * Math.PI) / 180;
+          const ax = p1.x + arcR * Math.cos(a);
+          const ay = p1.y - arcR * Math.sin(a);
+          if (s === 0) ctx.moveTo(ax, ay);
+          else ctx.lineTo(ax, ay);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 4. Primary Preview Segment
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
       ctx.stroke();
+
+      // 5. Crisp Floating Live Telemetry Pill right beside cursor
+      if (lenMm > 0.3 || this.typedCommandBuffer) {
+        const horizAcute = Math.abs(deg > 180 ? 360 - deg : deg);
+        const displayAcute = horizAcute > 90 ? 180 - horizAcute : horizAcute;
+        let angleLabel = `∠ ${displayAcute.toFixed(1)}°`;
+        if (Math.abs(deg - displayAcute) > 1.0 && Math.abs(displayAcute - 90) > 1.0 && Math.abs(displayAcute) > 1.0) {
+          angleLabel += ` (${deg.toFixed(0)}°)`;
+        }
+        if (this.snappedAngleInfo) {
+          angleLabel += ` · ${this.snappedAngleInfo.label}`;
+        }
+        const lenLabel = `${this.lockedLengthMm ? "🔒 " : ""}L: ${lenMm.toFixed(1)} mm`;
+        const lines = [lenLabel, angleLabel];
+        if (this.typedCommandBuffer) lines.push(`⌨ ${this.typedCommandBuffer} [Enter]`);
+
+        ctx.save();
+        ctx.font = "11px monospace";
+        const padX = 8;
+        const boxW = Math.max(...lines.map((t) => ctx.measureText(t).width)) + padX * 2;
+        const boxH = lines.length * 16 + 8;
+        const bx = Math.min(this.canvas.clientWidth - boxW - 8, p2.x + 14);
+        const by = Math.max(8, p2.y + 14);
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.92)";
+        ctx.strokeStyle = this.snappedAngleInfo ? "#f5b95d" : "#444444";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.fillRect(bx, by, boxW, boxH);
+        ctx.strokeRect(bx, by, boxW, boxH);
+
+        lines.forEach((text, idx) => {
+          ctx.fillStyle = idx === 1 && this.snappedAngleInfo ? "#f5b95d" : "#ffffff";
+          ctx.fillText(text, bx + padX, by + 16 + idx * 16);
+        });
+        ctx.restore();
+      }
     } else if (this.tool === "circle") {
       const r = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       ctx.beginPath();
       ctx.arc(p1.x, p1.y, r, 0, Math.PI * 2);
       ctx.stroke();
+
+      // Radius line + floating radius pill
+      ctx.save();
+      ctx.strokeStyle = "rgba(245, 185, 93, 0.65)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+
+      ctx.font = "11px monospace";
+      const label = `R: ${lenMm.toFixed(1)} mm (D: ${(lenMm * 2).toFixed(1)})`;
+      const boxW = ctx.measureText(label).width + 14;
+      ctx.fillStyle = "rgba(0, 0, 0, 0.92)";
+      ctx.strokeStyle = "#f5b95d";
+      ctx.setLineDash([]);
+      ctx.fillRect(p2.x + 12, p2.y + 12, boxW, 22);
+      ctx.strokeRect(p2.x + 12, p2.y + 12, boxW, 22);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(label, p2.x + 19, p2.y + 27);
+      ctx.restore();
     }
     ctx.restore();
   }

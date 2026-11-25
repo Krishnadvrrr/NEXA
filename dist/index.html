@@ -181,7 +181,7 @@
         <section id="practiceControls" hidden>
           <div class="practice-top-actions">
             <button type="button" id="btnAddCustomQuestion" class="primary add-question-btn">
-              ＋ Add Faculty Question
+              ＋ Add Question
             </button>
           </div>
 
@@ -191,7 +191,7 @@
             <option value="Projection of Solids">Unit 1: Projection of Solids</option>
             <option value="Section of Solids">Unit 2: Section of Solids</option>
             <option value="Development of Surfaces">Unit 3: Development of Surfaces</option>
-            <option value="custom">My Faculty Questions</option>
+            <option value="custom">My Custom Questions</option>
             <option value="free-practice">Free Practice (Open Sheet)</option>
           </select>
 
@@ -370,9 +370,34 @@
               <button type="button" id="btnToggleOrtho" class="toggle-tool-btn" title="Toggle Orthogonal Lock (Shift)">
                 Ortho: OFF
               </button>
-              <button type="button" id="btnToggleAngleSnap" class="toggle-tool-btn active" title="Toggle Angle Snapping (15°/30°/45°)">
+              <button type="button" id="btnToggleAngleSnap" class="toggle-tool-btn active" title="Toggle Polar Angle Snapping (15° increments & relative to snapped edges)">
                 Snap: 15°
               </button>
+              <div class="cad-lock-pill" title="Lock line angle in degrees (type or pick 30°, 45°, 60°, etc.)">
+                <span class="lock-prefix">∠</span>
+                <input id="angleLockInput" type="number" step="any" min="-360" max="360" placeholder="Free" list="commonAnglesList" aria-label="Lock angle in degrees" />
+                <span class="lock-unit">°</span>
+                <button type="button" id="btnAngleRelMode" class="mini-mode-btn" title="Angle reference: XY horizontal or relative to snapped edge">XY</button>
+                <button type="button" id="btnClearAngleLock" class="mini-clear-btn" hidden title="Unlock angle">×</button>
+              </div>
+              <div class="cad-lock-pill" title="Lock exact segment length in mm (optional)">
+                <span class="lock-prefix">L</span>
+                <input id="lengthLockInput" type="number" step="any" min="1" max="400" placeholder="Free" aria-label="Lock length in mm" />
+                <span class="lock-unit">mm</span>
+                <button type="button" id="btnClearLengthLock" class="mini-clear-btn" hidden title="Unlock length">×</button>
+              </div>
+              <datalist id="commonAnglesList">
+                <option value="15"></option>
+                <option value="30"></option>
+                <option value="40"></option>
+                <option value="45"></option>
+                <option value="60"></option>
+                <option value="75"></option>
+                <option value="90"></option>
+                <option value="120"></option>
+                <option value="135"></option>
+                <option value="150"></option>
+              </datalist>
             </div>
 
             <span class="cad-divider"></span>
@@ -533,10 +558,10 @@
     <dialog id="customQuestionDialog" class="custom-question-dialog">
       <form id="customQuestionForm" method="dialog">
         <div class="dialog-title">
-          <h2>Add Faculty / Custom Question</h2>
+          <h2>Add Question</h2>
           <button type="button" id="closeCustomQuestionDialog" aria-label="Close">✕</button>
         </div>
-        <p>Paste a question from your faculty to auto-extract dimensions and angles, or configure parameters below.</p>
+        <p>Paste your question to auto-extract dimensions and angles, or configure parameters below.</p>
 
         <label for="customRawText">Problem statement
           <textarea id="customRawText" rows="3" placeholder="e.g. A pentagonal pyramid of base side 30 mm and axis height 65 mm rests on HP on one of its base edges such that the axis is inclined at 40° to HP and parallel to VP. Draw its projections."></textarea>

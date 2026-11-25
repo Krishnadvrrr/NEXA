@@ -8,6 +8,7 @@ import {
   buildQuestionComprehension
 } from "../dist/js/customQuestionEngine.js";
 import { reconstructFrom2DStrokes } from "../dist/js/reconstruct3d.js";
+import { computePolarConstraint, parseDynamicEntry } from "../dist/js/practiceCanvas.js";
 
 test("Anna University Question Bank contains at least 9 problems across 3 syllabus units", () => {
   assert.ok(QUESTIONS.length >= 9, `Expected at least 9 questions, found ${QUESTIONS.length}`);
@@ -214,4 +215,32 @@ test("reconstructFrom2DStrokes extracts live 3D solids and cuts from drafted HP 
   assert.equal(rCutPyr.height, 65);
   assert.ok(rCutPyr.cutPlane && Math.abs(rCutPyr.cutPlane.angleDeg - 45) < 0.1);
   assert.ok(Math.abs(rCutPyr.cutPlane.cutHeight - 32.5) < 0.1);
+});
+
+test("computePolarConstraint & parseDynamicEntry handle 45-degree lock, edge-relative angles, and polar input", () => {
+  // 1. Explicit 45° lock in Quadrant 1 & Quadrant 2
+  const rQ1 = computePolarConstraint({ x: 0, y: 0 }, { x: 40, y: 36 }, { lockedAngleDeg: 45, lockedLengthMm: 50 });
+  assert.ok(Math.abs(Math.hypot(rQ1.point.x, rQ1.point.y) - 50) < 1e-6);
+  assert.ok(Math.abs((Math.atan2(rQ1.point.y, rQ1.point.x) * 180) / Math.PI - 45) < 1e-6);
+
+  const rQ2 = computePolarConstraint({ x: 0, y: 0 }, { x: -40, y: 36 }, { lockedAngleDeg: 45, lockedLengthMm: 50 });
+  assert.ok(Math.abs((Math.atan2(rQ2.point.y, rQ2.point.x) * 180) / Math.PI - 135) < 1e-6);
+
+  // 2. Edge-relative 45° & 90° lock relative to a 40° base edge -> 85° / 130°
+  const rEdge45 = computePolarConstraint(
+    { x: 0, y: 0 },
+    { x: 5, y: 40 },
+    { lockedAngleDeg: 45, angleRelativeTo: "edge", refEdgeAngleDeg: 40, lockedLengthMm: 30 }
+  );
+  assert.ok(Math.abs((Math.atan2(rEdge45.point.y, rEdge45.point.x) * 180) / Math.PI - 85) < 1e-6);
+
+  // 3. Polar Snap 45° within ±4.2° magnetic window
+  const rSnap = computePolarConstraint({ x: 0, y: 0 }, { x: 40, y: 37.8 }, { angleSnap: true });
+  assert.equal(rSnap.snappedInfo?.deg, 45);
+
+  // 4. Dynamic command entry ("50<45", "@30<135", "<40", "25")
+  assert.deepEqual(parseDynamicEntry("50<45"), { length: 50, angle: 45 });
+  assert.deepEqual(parseDynamicEntry("@30<-45"), { length: 30, angle: -45 });
+  assert.deepEqual(parseDynamicEntry("<40"), { length: null, angle: 40 });
+  assert.deepEqual(parseDynamicEntry("25"), { length: 25, angle: null });
 });

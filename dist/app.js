@@ -476,7 +476,7 @@ function initPracticeStudio() {
       if (customQuestions.length === 0) {
         const opt = document.createElement("option");
         opt.value = "empty-custom";
-        opt.textContent = "No custom questions yet — click '+ Add Faculty Question'";
+        opt.textContent = "No custom questions yet — click '+ Add Question'";
         qSelect.appendChild(opt);
       } else {
         customQuestions.forEach((q) => {
@@ -549,7 +549,7 @@ function initPracticeStudio() {
       livePractice3D?.updateStage(null, 0, practiceCanvas.elements);
       $("notice").textContent =
         qId === "empty-custom"
-          ? "Click '+ Add Faculty Question' to enter a problem from your teacher."
+          ? "Click '+ Add Question' to enter your own problem."
           : "Free Practice mode active. Full drafting freedom.";
       return;
     }
@@ -736,6 +736,70 @@ function initPracticeStudio() {
       ? "Snap: 15°"
       : "Snap: OFF";
   };
+
+  // Explicit Angle & Length Precision Locks
+  const angleInput = $("angleLockInput");
+  const angleClear = $("btnClearAngleLock");
+  const angleRelBtn = $("btnAngleRelMode");
+  const lenInput = $("lengthLockInput");
+  const lenClear = $("btnClearLengthLock");
+
+  if (angleInput) {
+    const applyAngleLock = () => {
+      const val = angleInput.value.trim();
+      const num = parseFloat(val);
+      if (val !== "" && Number.isFinite(num)) {
+        practiceCanvas.lockedAngleDeg = num;
+        angleInput.closest(".cad-lock-pill")?.classList.add("locked");
+        if (angleClear) angleClear.hidden = false;
+      } else {
+        practiceCanvas.lockedAngleDeg = null;
+        angleInput.closest(".cad-lock-pill")?.classList.remove("locked");
+        if (angleClear) angleClear.hidden = true;
+      }
+    };
+    angleInput.addEventListener("input", applyAngleLock);
+    angleInput.addEventListener("change", applyAngleLock);
+    if (angleClear) {
+      angleClear.onclick = () => {
+        angleInput.value = "";
+        applyAngleLock();
+      };
+    }
+  }
+
+  if (angleRelBtn) {
+    angleRelBtn.onclick = () => {
+      const next = practiceCanvas.angleRelativeTo === "edge" ? "xy" : "edge";
+      practiceCanvas.angleRelativeTo = next;
+      angleRelBtn.textContent = next === "edge" ? "Edge" : "XY";
+      angleRelBtn.classList.toggle("edge-mode", next === "edge");
+    };
+  }
+
+  if (lenInput) {
+    const applyLenLock = () => {
+      const val = lenInput.value.trim();
+      const num = parseFloat(val);
+      if (val !== "" && Number.isFinite(num) && num > 0) {
+        practiceCanvas.lockedLengthMm = num;
+        lenInput.closest(".cad-lock-pill")?.classList.add("locked");
+        if (lenClear) lenClear.hidden = false;
+      } else {
+        practiceCanvas.lockedLengthMm = null;
+        lenInput.closest(".cad-lock-pill")?.classList.remove("locked");
+        if (lenClear) lenClear.hidden = true;
+      }
+    };
+    lenInput.addEventListener("input", applyLenLock);
+    lenInput.addEventListener("change", applyLenLock);
+    if (lenClear) {
+      lenClear.onclick = () => {
+        lenInput.value = "";
+        applyLenLock();
+      };
+    }
+  }
 
   // Undo / Redo / Reset View
   $("canvasUndo").onclick = () => practiceCanvas.undo();
