@@ -2,6 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { QUESTIONS, TOPICS } from "../dist/js/data/questions.js";
 import { validateStep, TOLERANCE } from "../dist/js/stepValidator.js";
+import {
+  parseFacultyQuestionText,
+  buildCustomQuestion,
+  buildQuestionComprehension
+} from "../dist/js/customQuestionEngine.js";
 
 test("Anna University Question Bank contains at least 9 problems across 3 syllabus units", () => {
   assert.ok(QUESTIONS.length >= 9, `Expected at least 9 questions, found ${QUESTIONS.length}`);
@@ -67,4 +72,103 @@ test("Step validation engine enforces engineering tolerances and gives construct
   const rightPoly = [{ type: "polygon", sides: 4, edgeLength: 30, cx: -50, cy: -40, grade: "HB" }];
   const rightRes = validateStep(step2, rightPoly);
   assert.equal(rightRes.valid, true);
+});
+
+test("parseFacultyQuestionText accurately extracts engineering specs from faculty prompts", () => {
+  const proj = parseFacultyQuestionText(
+    "A pentagonal pyramid of base side 30 mm and axis height 65 mm rests on HP on one of its base edges such that the axis is inclined at 40° to HP and parallel to VP. Draw its projections."
+  );
+  assert.equal(proj.spec.unit, "Projection of Solids");
+  assert.equal(proj.spec.solid, "pentPyramid");
+  assert.equal(proj.spec.baseEdge, 30);
+  assert.equal(proj.spec.height, 65);
+  assert.equal(proj.spec.restingOn, "base edge");
+  assert.equal(proj.spec.alpha, 40);
+
+  const sec = parseFacultyQuestionText(
+    "A hexagonal prism of base 25 mm and axis 60 mm rests on HP. A section plane inclined at 35 deg to HP passes 15 mm from the top face."
+  );
+  assert.equal(sec.spec.unit, "Section of Solids");
+  assert.equal(sec.spec.solid, "hexPrism");
+  assert.equal(sec.spec.baseEdge, 25);
+  assert.equal(sec.spec.height, 60);
+  assert.equal(sec.spec.cuttingAngle, 35);
+  assert.equal(sec.spec.cutMode, "fromTop");
+  assert.equal(sec.spec.cutOffset, 15);
+
+  const dev = parseFacultyQuestionText(
+    "A cone of base diameter 50 mm and axis 70 mm is cut by a plane at 45° to HP bisecting the axis. Develop its lateral surface."
+  );
+  assert.equal(dev.spec.unit, "Development of Surfaces");
+  assert.equal(dev.spec.solid, "cone");
+  assert.equal(dev.spec.diameter, 50);
+  assert.equal(dev.spec.height, 70);
+  assert.equal(dev.spec.cuttingAngle, 45);
+  assert.equal(dev.spec.cutMode, "midpoint");
+});
+
+test("buildCustomQuestion generates finite geometry, comprehension guides, and working validation across all 3 units", () => {
+  const projQ = buildCustomQuestion({
+    unit: "Projection of Solids",
+    solid: "pentPyramid",
+    baseEdge: 30,
+    height: 65,
+    restingOn: "base edge",
+    alpha: 40
+  });
+  assert.equal(projQ.isCustom, true);
+  assert.equal(projQ.steps.length, 6);
+  assert.ok(projQ.comprehension.simplePositionRule.includes("40°"));
+  assert.ok(projQ.comprehension.baseOrientationRule.includes("BASE EDGE"));
+
+  // Check Step 2 polygon validation for pentagon (5 sides, 30 mm)
+  assert.equal(
+    validateStep(projQ.steps[1], [{ type: "polygon", sides: 4, edgeLength: 30, cx: -65, cy: -45 }]).valid,
+    false
+  );
+  assert.equal(
+    validateStep(projQ.steps[1], [{ type: "polygon", sides: 5, edgeLength: 30, cx: -65, cy: -45 }]).valid,
+    true
+  );
+  // Check Step 5 tilted view (accepts 40° axis or 50° base)
+  assert.equal(
+    validateStep(projQ.steps[4], [{ type: "line", x1: 15, y1: 0, x2: 15 + 65 * Math.cos((40 * Math.PI) / 180), y2: 65 * Math.sin((40 * Math.PI) / 180) }]).valid,
+    true
+  );
+
+  // Check Section of Solids custom question
+  const secQ = buildCustomQuestion({
+    unit: "Section of Solids",
+    solid: "pentPrism",
+    baseEdge: 28,
+    height: 60,
+    cuttingAngle: 40,
+    cutMode: "fromTop",
+    cutOffset: 15
+  });
+  assert.equal(secQ.parameters.cutHeight, 45);
+  assert.equal(secQ.steps.length, 6);
+  assert.equal(
+    validateStep(secQ.steps[3], [{ type: "line", x1: -85, y1: 24, x2: -35, y2: 66 }]).valid,
+    true
+  );
+
+  // Check Development of Surfaces Cone radial sector calculations & validation
+  const devQ = buildCustomQuestion({
+    unit: "Development of Surfaces",
+    solid: "cone",
+    diameter: 50,
+    height: 65,
+    cuttingAngle: 45,
+    cutMode: "midpoint"
+  });
+  assert.equal(devQ.steps.length, 5);
+  assert.ok(devQ.comprehension.calculations.some((c) => c.includes("Sector Angle")));
+  assert.equal(validateStep(devQ.steps[1], []).valid, true); // alwaysPass calc step
+
+  // Ensure every built-in question also yields a valid comprehension breakdown
+  for (const q of QUESTIONS) {
+    const comp = buildQuestionComprehension(q);
+    assert.ok(comp && comp.simplePositionRule && comp.baseOrientationRule && comp.calculations.length >= 2);
+  }
 });

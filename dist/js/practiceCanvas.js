@@ -846,11 +846,29 @@ export class PracticeCanvas {
 
   drawGhostGuide(ctx) {
     ctx.save();
-    ctx.strokeStyle = "rgba(245, 185, 93, 0.4)";
-    ctx.lineWidth = 1.8;
-    ctx.setLineDash([5, 4]);
-
     for (const g of this.ghostElements) {
+      if (g.style === "cutting") {
+        ctx.strokeStyle = "rgba(255, 83, 112, 0.55)";
+        ctx.lineWidth = 2.0;
+        ctx.setLineDash([12, 4, 3, 4]);
+      } else if (g.style === "hidden") {
+        ctx.strokeStyle = "rgba(245, 185, 93, 0.35)";
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([4, 4]);
+      } else if (g.style === "axis") {
+        ctx.strokeStyle = "rgba(245, 185, 93, 0.38)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([12, 3, 2, 3]);
+      } else if (g.style === "construction") {
+        ctx.strokeStyle = "rgba(245, 185, 93, 0.28)";
+        ctx.lineWidth = 1.0;
+        ctx.setLineDash([3, 3]);
+      } else {
+        ctx.strokeStyle = "rgba(245, 185, 93, 0.45)";
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([5, 4]);
+      }
+
       if (g.type === "line" && g.from && g.to) {
         const p1 = this.worldToScreen(g.from[0], g.from[1]);
         const p2 = this.worldToScreen(g.to[0], g.to[1]);
@@ -864,20 +882,49 @@ export class PracticeCanvas {
         ctx.beginPath();
         ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (g.type === "arc" && g.center && Number.isFinite(g.radius)) {
+        const c = this.worldToScreen(g.center[0], g.center[1]);
+        const r = g.radius * this.basePxPerMm * this.zoom;
+        const sa = ((g.startAngle || 0) * Math.PI) / 180;
+        const ea = ((g.endAngle || 90) * Math.PI) / 180;
+        ctx.beginPath();
+        for (let i = 0; i <= 48; i++) {
+          const a = sa + ((ea - sa) * i) / 48;
+          const px = c.x + r * Math.cos(a);
+          const py = c.y - r * Math.sin(a);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      } else if (g.type === "polygon" && g.points && g.points.length > 0) {
+        ctx.beginPath();
+        g.points.forEach((pt, idx) => {
+          const sp = this.worldToScreen(pt[0], pt[1]);
+          if (idx === 0) ctx.moveTo(sp.x, sp.y);
+          else ctx.lineTo(sp.x, sp.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
       } else if (g.type === "polygon" && g.center) {
         const c = this.worldToScreen(g.center[0], g.center[1]);
         const sides = g.sides || 6;
-        const R = (g.edgeLength || 25) / (2 * Math.sin(Math.PI / sides)) * this.basePxPerMm * this.zoom;
+        const R = ((g.edgeLength || 25) / (2 * Math.sin(Math.PI / sides))) * this.basePxPerMm * this.zoom;
+        const baseA = ((g.angle || 0) * Math.PI) / 180;
         ctx.beginPath();
         for (let i = 0; i < sides; i++) {
-          const a = (2 * Math.PI * i) / sides;
+          const a = baseA + (2 * Math.PI * i) / sides;
           const x = c.x + R * Math.cos(a);
-          const y = c.y + R * Math.sin(a);
+          const y = c.y - R * Math.sin(a);
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.closePath();
         ctx.stroke();
+      } else if (g.type === "text" && g.pos && g.text) {
+        const sp = this.worldToScreen(g.pos[0], g.pos[1]);
+        ctx.fillStyle = "rgba(245, 185, 93, 0.7)";
+        ctx.font = "12px monospace";
+        ctx.fillText(g.text, sp.x, sp.y);
       }
     }
 

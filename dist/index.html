@@ -179,12 +179,19 @@
           </p>
         </section>
         <section id="practiceControls" hidden>
+          <div class="practice-top-actions">
+            <button type="button" id="btnAddCustomQuestion" class="primary add-question-btn">
+              ＋ Add Faculty Question
+            </button>
+          </div>
+
           <label for="topicSelect">Syllabus unit</label>
           <select id="topicSelect">
             <option value="all">All Units</option>
             <option value="Projection of Solids">Unit 1: Projection of Solids</option>
             <option value="Section of Solids">Unit 2: Section of Solids</option>
             <option value="Development of Surfaces">Unit 3: Development of Surfaces</option>
+            <option value="custom">My Faculty Questions</option>
             <option value="free-practice">Free Practice (Open Sheet)</option>
           </select>
 
@@ -194,11 +201,24 @@
           <div id="problemCard" class="card-box">
             <div class="card-header">
               <span class="badge" id="problemUnitBadge">UNIT 1</span>
-              <button type="button" id="btnView3D" class="subtle-link-btn" title="Inspect 3D solid model">🔍 View in 3D</button>
+              <div class="card-header-actions">
+                <button type="button" id="btnDeleteCustomQ" class="icon-danger-btn" title="Delete custom question" hidden>🗑</button>
+                <button type="button" id="btnView3D" class="subtle-link-btn" title="Inspect 3D solid model">🔍 View in 3D</button>
+              </div>
             </div>
             <h3 id="problemTitle" class="card-title">Problem Title</h3>
             <p id="problemStatement" class="problem-text">Problem statement text goes here...</p>
             <div id="problemParams" class="param-tags"></div>
+
+            <details id="problemUnderstandDetails" class="understand-details">
+              <summary>📘 Concept & Method Breakdown</summary>
+              <div class="understand-body">
+                <p id="understandSetup" class="understand-line"></p>
+                <p id="understandOrientation" class="understand-line"></p>
+                <ul id="understandCalcs" class="understand-calcs"></ul>
+                <p id="understandTip" class="understand-tip"></p>
+              </div>
+            </details>
           </div>
 
           <div id="stepCard" class="card-box step-box">
@@ -494,6 +514,110 @@
         Drag to orbit · Scroll to zoom · Right-drag to pan
         <button type="button" id="closePreview3dBtn" class="primary" style="margin-left:auto; padding: 4px 12px; font-size: 12px;">Return to Drafting</button>
       </div>
+    </dialog>
+    <dialog id="customQuestionDialog" class="custom-question-dialog">
+      <form id="customQuestionForm" method="dialog">
+        <div class="dialog-title">
+          <h2>Add Faculty / Custom Question</h2>
+          <button type="button" id="closeCustomQuestionDialog" aria-label="Close">✕</button>
+        </div>
+        <p>Paste a question from your faculty to auto-extract dimensions and angles, or configure parameters below.</p>
+
+        <label for="customRawText">Problem statement
+          <textarea id="customRawText" rows="3" placeholder="e.g. A pentagonal pyramid of base side 30 mm and axis height 65 mm rests on HP on one of its base edges such that the axis is inclined at 40° to HP and parallel to VP. Draw its projections."></textarea>
+        </label>
+
+        <div class="parse-bar">
+          <button type="button" id="btnParseQuestion" class="secondary-btn parse-btn">⚡ Auto-Extract Parameters</button>
+          <span id="parseStatusMsg" class="parse-status"></span>
+        </div>
+
+        <div class="two">
+          <label for="customUnit">Syllabus Unit
+            <select id="customUnit">
+              <option value="Projection of Solids">Projection of Solids</option>
+              <option value="Section of Solids">Section of Solids</option>
+              <option value="Development of Surfaces">Development of Surfaces</option>
+            </select>
+          </label>
+          <label for="customSolid">Solid Geometry
+            <select id="customSolid">
+              <option value="squarePrism">Square Prism</option>
+              <option value="pentPrism">Pentagonal Prism</option>
+              <option value="hexPrism">Hexagonal Prism</option>
+              <option value="triPrism">Triangular Prism</option>
+              <option value="cube">Cube</option>
+              <option value="squarePyramid">Square Pyramid</option>
+              <option value="pentPyramid">Pentagonal Pyramid</option>
+              <option value="hexPyramid">Hexagonal Pyramid</option>
+              <option value="triPyramid">Triangular Pyramid / Tetrahedron</option>
+              <option value="cylinder">Cylinder</option>
+              <option value="cone">Cone</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="two">
+          <label for="customBaseSize"><span id="customBaseLabel">Base edge</span>
+            <div class="unit">
+              <input id="customBaseSize" type="number" step="any" min="8" max="150" value="30" required /><span>mm</span>
+            </div>
+          </label>
+          <label for="customHeight">Axis height
+            <div class="unit">
+              <input id="customHeight" type="number" step="any" min="15" max="200" value="60" required /><span>mm</span>
+            </div>
+          </label>
+        </div>
+
+        <div id="customProjFields" class="two">
+          <label for="customRestingOn">Resting on HP
+            <select id="customRestingOn">
+              <option value="base edge">Base edge on HP</option>
+              <option value="base corner">Base corner on HP</option>
+            </select>
+          </label>
+          <label for="customAlpha">Axis angle to HP (α)
+            <div class="unit">
+              <input id="customAlpha" type="number" step="any" min="10" max="85" value="45" /><span>°</span>
+            </div>
+          </label>
+        </div>
+
+        <div id="customSectionFields" hidden>
+          <div class="two">
+            <label for="customCutAngle">Section plane angle to HP
+              <div class="unit">
+                <input id="customCutAngle" type="number" step="any" min="10" max="80" value="45" /><span>°</span>
+              </div>
+            </label>
+            <label for="customCutMode">Section passes through
+              <select id="customCutMode">
+                <option value="midpoint">Bisecting axis (H / 2)</option>
+                <option value="fromBase">Distance above base</option>
+                <option value="fromTop">Distance below top / apex</option>
+              </select>
+            </label>
+          </div>
+          <label id="customCutOffsetWrap" for="customCutOffset" hidden>Offset distance
+            <div class="unit">
+              <input id="customCutOffset" type="number" step="any" min="2" max="180" value="20" /><span>mm</span>
+            </div>
+          </label>
+        </div>
+
+        <label for="customTitle">Problem title (optional)
+          <input id="customTitle" maxlength="72" placeholder="Auto-generated if left blank" />
+        </label>
+
+        <div id="customComprehensionPreview" class="custom-preview-box">
+          <div class="preview-box-title">HOW THE STUDIO WILL GUIDE YOU</div>
+          <p id="customPreviewSummary"></p>
+          <ul id="customPreviewCalcs" class="understand-calcs"></ul>
+        </div>
+
+        <button class="primary" type="submit">Create & Start Guided Practice</button>
+      </form>
     </dialog>
     <script type="module" src="app.js"></script>
   </body>

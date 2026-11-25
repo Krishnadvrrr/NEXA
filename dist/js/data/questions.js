@@ -832,5 +832,6 @@ export const TOPICS = [
   { id: "Projection of Solids", name: "Unit 1: Projection of Solids" },
   { id: "Section of Solids", name: "Unit 2: Section of Solids" },
   { id: "Development of Surfaces", name: "Unit 3: Development of Surfaces" },
+  { id: "custom", name: "My Faculty Questions" },
   { id: "free-practice", name: "Free Practice (Open Sheet)" }
 ];

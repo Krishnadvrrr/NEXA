@@ -35,9 +35,13 @@ test("true inclination axes remain unit length at boundary orientations", () => 
 test("all solids are closed convex manifolds with outward faces and positive plane clearance", () => {
   for (const solid of [
     "cube",
+    "triPrism",
     "squarePrism",
+    "pentPrism",
     "hexPrism",
+    "triPyramid",
     "squarePyramid",
+    "pentPyramid",
     "hexPyramid",
     "cylinder",
     "cone",

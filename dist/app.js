@@ -6,6 +6,14 @@ import { QUESTIONS, TOPICS } from "./js/data/questions.js";
 import { validateStep } from "./js/stepValidator.js";
 import { PracticeCanvas } from "./js/practiceCanvas.js";
 import { createPractice3D } from "./js/practice3d.js";
+import {
+  SOLID_CATALOG,
+  parseFacultyQuestionText,
+  buildQuestionComprehension,
+  buildCustomQuestion,
+  loadCustomQuestions,
+  saveCustomQuestions,
+} from "./js/customQuestionEngine.js";
 
 const $ = (id) => document.getElementById(id);
 const defaults = {
@@ -41,7 +49,8 @@ let state = { ...defaults },
   modelKey = "";
 
 // Practice Studio state
-let practiceCanvas = null,
+let customQuestions = loadCustomQuestions(),
+  practiceCanvas = null,
   livePractice3D = null,
   currentQuestion = QUESTIONS[0],
   currentStepIndex = 0,
@@ -448,27 +457,50 @@ function initPracticeStudio() {
     topicSelect.appendChild(opt);
   }
 
+  function getAllQuestions() {
+    return [...customQuestions, ...QUESTIONS];
+  }
+
   // 2. Populate Questions based on Topic
-  function updateQuestionDropdown(topicId) {
+  function updateQuestionDropdown(topicId, preferredQuestionId = null) {
     const qSelect = $("questionSelect");
     qSelect.innerHTML = "";
+    const allQuestions = getAllQuestions();
 
     if (topicId === "free-practice") {
       const opt = document.createElement("option");
       opt.value = "free";
       opt.textContent = "Free Practice — Open Digital Drafting Sheet";
       qSelect.appendChild(opt);
+    } else if (topicId === "custom") {
+      if (customQuestions.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "empty-custom";
+        opt.textContent = "No custom questions yet — click '+ Add Faculty Question'";
+        qSelect.appendChild(opt);
+      } else {
+        customQuestions.forEach((q) => {
+          const opt = document.createElement("option");
+          opt.value = q.id;
+          opt.textContent = `[Custom] ${q.unit}: ${q.title}`;
+          qSelect.appendChild(opt);
+        });
+      }
     } else {
       const filtered =
         topicId === "all"
-          ? QUESTIONS
-          : QUESTIONS.filter((q) => q.unit === topicId);
+          ? allQuestions
+          : allQuestions.filter((q) => q.unit === topicId);
       filtered.forEach((q) => {
         const opt = document.createElement("option");
         opt.value = q.id;
-        opt.textContent = `${q.unit}: ${q.title}`;
+        opt.textContent = `${q.isCustom ? "[Custom] " : ""}${q.unit}: ${q.title}`;
         qSelect.appendChild(opt);
       });
+    }
+
+    if (preferredQuestionId && [...qSelect.options].some((o) => o.value === preferredQuestionId)) {
+      qSelect.value = preferredQuestionId;
     }
     loadActiveQuestion();
   }
@@ -479,9 +511,33 @@ function initPracticeStudio() {
   const qSelect = $("questionSelect");
   qSelect.onchange = () => loadActiveQuestion();
 
+  function renderComprehensionCard(q) {
+    const comp = buildQuestionComprehension(q);
+    const details = $("problemUnderstandDetails");
+    if (!details || !comp) {
+      if (details) details.hidden = true;
+      return;
+    }
+    details.hidden = false;
+    details.open = Boolean(q.isCustom);
+
+    $("understandSetup").textContent = comp.simplePositionRule || "";
+    $("understandOrientation").textContent = comp.baseOrientationRule || "";
+
+    const calcList = $("understandCalcs");
+    calcList.innerHTML = "";
+    for (const item of comp.calculations || []) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      calcList.appendChild(li);
+    }
+    $("understandTip").textContent = comp.visibilityTip ? `Tip: ${comp.visibilityTip}` : "";
+  }
+
   function loadActiveQuestion() {
     const qId = qSelect.value;
-    const isFree = qId === "free";
+    const isFree = qId === "free" || qId === "empty-custom";
+    const allQuestions = getAllQuestions();
 
     $("problemCard").hidden = isFree;
     $("stepCard").hidden = isFree;
@@ -491,17 +547,24 @@ function initPracticeStudio() {
       practiceCanvas.ghostElements = [];
       practiceCanvas.render();
       livePractice3D?.updateStage(null, 0, practiceCanvas.elements);
-      $("notice").textContent = "Free Practice mode active. Full drafting freedom.";
+      $("notice").textContent =
+        qId === "empty-custom"
+          ? "Click '+ Add Faculty Question' to enter a problem from your teacher."
+          : "Free Practice mode active. Full drafting freedom.";
       return;
     }
 
-    currentQuestion = QUESTIONS.find((q) => q.id === qId) || QUESTIONS[0];
+    currentQuestion = allQuestions.find((q) => q.id === qId) || allQuestions[0];
     currentStepIndex = 0;
 
     // Update Problem Card UI
-    $("problemUnitBadge").textContent = currentQuestion.unit.toUpperCase();
+    $("problemUnitBadge").textContent =
+      (currentQuestion.isCustom ? "CUSTOM · " : "") + currentQuestion.unit.toUpperCase();
     $("problemTitle").textContent = currentQuestion.title;
     $("problemStatement").textContent = currentQuestion.problemStatement;
+
+    const delBtn = $("btnDeleteCustomQ");
+    if (delBtn) delBtn.hidden = !currentQuestion.isCustom;
 
     const paramContainer = $("problemParams");
     paramContainer.innerHTML = "";
@@ -509,11 +572,13 @@ function initPracticeStudio() {
       if (typeof v === "number" || typeof v === "string") {
         const tag = document.createElement("span");
         tag.className = "param-tag";
-        tag.textContent = `${k}: ${v}${typeof v === "number" && !k.toLowerCase().includes("angle") ? "mm" : ""}`;
+        const isAngle = k.toLowerCase().includes("angle") || k === "alpha" || k === "beta";
+        tag.textContent = `${k}: ${v}${typeof v === "number" ? (isAngle ? "°" : "mm") : ""}`;
         paramContainer.appendChild(tag);
       }
     }
 
+    renderComprehensionCard(currentQuestion);
     updateStepUI();
   }
 
@@ -538,6 +603,14 @@ function initPracticeStudio() {
     if (step.lineType) {
       $("pencilGradeSelect").value = step.lineType;
       practiceCanvas.pencilGrade = step.lineType;
+    }
+
+    // Auto-prefill Polygon generator settings when step provides suggestedPolygon
+    if (step.suggestedPolygon) {
+      practiceCanvas.polygonSettings = { ...step.suggestedPolygon };
+      if ($("polySides")) $("polySides").value = String(step.suggestedPolygon.sides);
+      if ($("polyEdge")) $("polyEdge").value = String(step.suggestedPolygon.edgeLength);
+      if ($("polyAngle")) $("polyAngle").value = String(step.suggestedPolygon.angle);
     }
 
     // Update Ghost Guide Geometry
@@ -687,11 +760,15 @@ function initPracticeStudio() {
       preview3dRenderer = createRenderer(host);
 
       const solidType = p.solid || "squarePrism";
+      const isCurvedSolid = solidType === "cylinder" || solidType === "cone";
+      const sizeParam = isCurvedSolid
+        ? p.radius || (p.diameter ? p.diameter / 2 : 20)
+        : p.baseEdge || 30;
       const previewModel = buildSolid({
         solid: solidType,
-        size: p.baseEdge || p.radius || (p.diameter ? p.diameter / 2 : 25),
+        size: sizeParam,
         height: p.height || 60,
-        alpha: p.alpha || 45,
+        alpha: p.alpha !== undefined ? p.alpha : 90,
         beta: p.beta || 0,
         roll: 0,
       });
@@ -711,6 +788,135 @@ function initPracticeStudio() {
   };
   $("closePreview3d").onclick = close3d;
   $("closePreview3dBtn").onclick = close3d;
+
+  // 11. Custom / Faculty Question Dialog & Deletion
+  const customDlg = $("customQuestionDialog");
+  if (customDlg) {
+    const syncCustomFormFields = () => {
+      const unitVal = $("customUnit").value;
+      const solidVal = $("customSolid").value;
+      const meta = SOLID_CATALOG[solidVal] || SOLID_CATALOG.squarePrism;
+
+      $("customBaseLabel").textContent = meta.isCurved ? "Base diameter" : "Base edge";
+      $("customHeight").disabled = Boolean(meta.isCube);
+      if (meta.isCube) $("customHeight").value = $("customBaseSize").value;
+
+      const isProj = unitVal === "Projection of Solids";
+      const isMidpoint = $("customCutMode").value === "midpoint";
+      $("customProjFields").hidden = !isProj;
+      $("customSectionFields").hidden = isProj;
+      $("customCutOffsetWrap").hidden = isMidpoint;
+
+      $("customRestingOn").disabled = !isProj;
+      $("customAlpha").disabled = !isProj;
+      $("customCutAngle").disabled = isProj;
+      $("customCutMode").disabled = isProj;
+      $("customCutOffset").disabled = isProj || isMidpoint;
+
+      // Update Live Comprehension Preview
+      const previewSpec = readCustomFormSpec();
+      const previewQ = buildCustomQuestion(previewSpec);
+      const comp = previewQ.comprehension;
+      $("customPreviewSummary").textContent = `${previewQ.steps.length} guided steps ready · ${comp.simplePositionRule}`;
+      const list = $("customPreviewCalcs");
+      list.innerHTML = "";
+      for (const c of comp.calculations || []) {
+        const li = document.createElement("li");
+        li.textContent = c;
+        list.appendChild(li);
+      }
+    };
+
+    const readCustomFormSpec = () => ({
+      unit: $("customUnit").value,
+      solid: $("customSolid").value,
+      baseEdge: Number($("customBaseSize").value) || 30,
+      diameter: Number($("customBaseSize").value) || 40,
+      height: Number($("customHeight").value) || 60,
+      restingOn: $("customRestingOn").value,
+      alpha: Number($("customAlpha").value) || 45,
+      cuttingAngle: Number($("customCutAngle").value) || 45,
+      cutMode: $("customCutMode").value,
+      cutOffset: Number($("customCutOffset").value) || 20,
+      title: $("customTitle").value,
+      problemStatement: $("customRawText").value,
+    });
+
+    $("btnAddCustomQuestion").onclick = () => {
+      $("parseStatusMsg").textContent = "";
+      syncCustomFormFields();
+      customDlg.showModal();
+    };
+    $("closeCustomQuestionDialog").onclick = () => customDlg.close();
+
+    $("btnParseQuestion").onclick = () => {
+      const raw = $("customRawText").value;
+      if (!raw.trim()) {
+        $("parseStatusMsg").textContent = "Paste or type a question statement first.";
+        return;
+      }
+      const { spec, detected } = parseFacultyQuestionText(raw);
+      $("customUnit").value = spec.unit;
+      $("customSolid").value = spec.solid;
+      const meta = SOLID_CATALOG[spec.solid];
+      $("customBaseSize").value = meta?.isCurved ? spec.diameter : spec.baseEdge;
+      $("customHeight").value = spec.height;
+      $("customRestingOn").value = spec.restingOn === "base corner" ? "base corner" : "base edge";
+      $("customAlpha").value = spec.alpha;
+      $("customCutAngle").value = spec.cuttingAngle;
+      $("customCutMode").value = spec.cutMode;
+      $("customCutOffset").value = spec.cutOffset;
+      $("customTitle").value = spec.title;
+      $("parseStatusMsg").textContent = `Detected: ${detected.join(" · ")}`;
+      syncCustomFormFields();
+    };
+
+    [
+      "customUnit",
+      "customSolid",
+      "customBaseSize",
+      "customHeight",
+      "customRestingOn",
+      "customAlpha",
+      "customCutAngle",
+      "customCutMode",
+      "customCutOffset",
+    ].forEach((id) => {
+      const el = $(id);
+      if (el) {
+        el.addEventListener("input", syncCustomFormFields);
+        el.addEventListener("change", syncCustomFormFields);
+      }
+    });
+
+    $("customQuestionForm").onsubmit = (e) => {
+      e.preventDefault();
+      const spec = readCustomFormSpec();
+      const newQ = buildCustomQuestion(spec);
+      customQuestions = [newQ, ...customQuestions];
+      saveCustomQuestions(customQuestions);
+      customDlg.close();
+
+      if (practiceCanvas.elements.length > 0) {
+        practiceCanvas.clearCanvas();
+      }
+      topicSelect.value = "all";
+      updateQuestionDropdown("all", newQ.id);
+      $("notice").textContent = `Added custom question "${newQ.title}" with ${newQ.steps.length} guided steps.`;
+    };
+  }
+
+  if ($("btnDeleteCustomQ")) {
+    $("btnDeleteCustomQ").onclick = () => {
+      if (!currentQuestion || !currentQuestion.isCustom) return;
+      if (confirm(`Delete custom question "${currentQuestion.title}"?`)) {
+        customQuestions = customQuestions.filter((q) => q.id !== currentQuestion.id);
+        saveCustomQuestions(customQuestions);
+        updateQuestionDropdown(topicSelect.value);
+        $("notice").textContent = "Custom question deleted.";
+      }
+    };
+  }
 
   // Initialize Live 3D Step Visualizer side column
   try {

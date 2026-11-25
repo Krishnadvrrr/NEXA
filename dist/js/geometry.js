@@ -15,10 +15,16 @@ export function axisDirection(alpha, beta) {
     z = Math.sin((beta * Math.PI) / 180);
   return [Math.sqrt(Math.max(0, 1 - y * y - z * z)), y, z];
 }
+export function solidSides(solid = "") {
+  if (solid.includes("tri") || solid === "tetrahedron") return 3;
+  if (solid.includes("pent")) return 5;
+  if (solid.includes("hex")) return 6;
+  return 4;
+}
 export function buildSolid(s) {
   const curved = ["cylinder", "cone"].includes(s.solid),
-    pyramid = s.solid.includes("Pyramid") || s.solid === "cone",
-    n = curved ? 180 : s.solid.includes("hex") ? 6 : 4;
+    pyramid = s.solid.includes("Pyramid") || s.solid === "cone" || s.solid === "tetrahedron",
+    n = curved ? 180 : solidSides(s.solid);
   const r = curved ? s.size : s.size / (2 * Math.sin(Math.PI / n)),
     h = s.solid === "cube" ? s.size : s.height;
   const axis = axisDirection(s.alpha, s.beta),

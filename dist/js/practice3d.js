@@ -392,6 +392,7 @@ export function createPractice3D(host) {
         const devMesh = buildDevelopmentSheetMesh(
           solidType,
           baseEdge,
+          radius,
           height,
           centerZ,
         );
@@ -558,13 +559,24 @@ export function createPractice3D(host) {
   }
 
   // Geometry Builders
+  function polySides3D(solidType) {
+    if (solidType.includes("tri") || solidType === "tetrahedron") return 3;
+    if (solidType.includes("pent")) return 5;
+    if (solidType.includes("hex")) return 6;
+    return 4;
+  }
+
   function buildBase2DMesh(solidType, edge, radius, centerZ) {
     const group = new THREE.Group();
     let geo;
 
-    if (solidType.includes("hex")) {
-      const sides = 6;
-      const R = edge;
+    if (solidType === "cylinder" || solidType === "cone") {
+      geo = new THREE.CircleGeometry(radius, 48);
+    } else if (solidType === "squarePrism" || solidType === "squarePyramid" || solidType === "cube") {
+      geo = new THREE.PlaneGeometry(edge, edge);
+    } else {
+      const sides = polySides3D(solidType);
+      const R = edge / (2 * Math.sin(Math.PI / sides));
       const shape = new THREE.Shape();
       for (let i = 0; i < sides; i++) {
         const a = (i * Math.PI * 2) / sides;
@@ -575,12 +587,6 @@ export function createPractice3D(host) {
       }
       shape.closePath();
       geo = new THREE.ShapeGeometry(shape);
-    } else if (solidType.includes("square") || solidType === "cube") {
-      const half = edge / 2;
-      geo = new THREE.PlaneGeometry(edge, edge);
-    } else {
-      // Cylinder or Cone (Circle base)
-      geo = new THREE.CircleGeometry(radius, 48);
     }
 
     // Lay flat on HP (rotation X = -90 deg)
@@ -613,8 +619,9 @@ export function createPractice3D(host) {
     const group = new THREE.Group();
     const projPoints = [];
 
-    // Base corner points on HP
-    const w = edge / 2;
+    const isCurved = solidType === "cylinder" || solidType === "cone";
+    const sides = polySides3D(solidType);
+    const w = isCurved ? radius : edge / (2 * Math.sin(Math.PI / sides));
     const cornerXs = [-w, w];
 
     for (const x of cornerXs) {
@@ -652,23 +659,21 @@ export function createPractice3D(host) {
   ) {
     const group = new THREE.Group();
     let meshGeo;
+    const isPyramid = solidType.includes("Pyramid") || solidType === "cone" || solidType === "tetrahedron";
+    const isCurved = solidType === "cone" || solidType === "cylinder";
 
-    if (solidType.includes("hex") && solidType.includes("Pyramid")) {
-      meshGeo = new THREE.ConeGeometry(edge, height, 6);
-    } else if (solidType.includes("hex")) {
-      meshGeo = new THREE.CylinderGeometry(edge, edge, height, 6);
-    } else if (
-      solidType.includes("square") &&
-      solidType.includes("Pyramid")
-    ) {
-      meshGeo = new THREE.ConeGeometry(edge * 0.707, height, 4);
-    } else if (solidType.includes("square") || solidType === "cube") {
+    if (isCurved) {
+      meshGeo = isPyramid
+        ? new THREE.ConeGeometry(radius, height, 48)
+        : new THREE.CylinderGeometry(radius, radius, height, 48);
+    } else if (solidType === "squarePrism" || solidType === "cube") {
       meshGeo = new THREE.BoxGeometry(edge, height, edge);
-    } else if (solidType === "cone") {
-      meshGeo = new THREE.ConeGeometry(radius, height, 48);
     } else {
-      // Cylinder
-      meshGeo = new THREE.CylinderGeometry(radius, radius, height, 48);
+      const sides = polySides3D(solidType);
+      const R = edge / (2 * Math.sin(Math.PI / sides));
+      meshGeo = isPyramid
+        ? new THREE.ConeGeometry(R, height, sides)
+        : new THREE.CylinderGeometry(R, R, height, sides);
     }
 
     const mesh = new THREE.Mesh(meshGeo, solidMat);
@@ -719,9 +724,11 @@ export function createPractice3D(host) {
     return group;
   }
 
-  function buildDevelopmentSheetMesh(solidType, edge, height, centerZ) {
+  function buildDevelopmentSheetMesh(solidType, edge, radius, height, centerZ) {
     const group = new THREE.Group();
-    const stretchLen = edge * 4; // 120 mm for square prism
+    const isCurved = solidType === "cylinder" || solidType === "cone";
+    const sides = polySides3D(solidType);
+    const stretchLen = isCurved ? Math.PI * 2 * radius : edge * sides;
     const geo = new THREE.PlaneGeometry(stretchLen, height);
 
     const mat = new THREE.MeshBasicMaterial({

@@ -13,6 +13,10 @@ export const TOLERANCE = {
 
 export function validateStep(step, elements) {
   if (!step) return { valid: true, message: "Free practice mode. No constraints." };
+  const rules = step.validation?.requires || [];
+  if (rules.some((r) => r.type === "alwaysPass")) {
+    return { valid: true, message: "✓ Calculation step verified! Proceed to the next step." };
+  }
   if (!elements || elements.length === 0) {
     return {
       valid: false,
@@ -21,7 +25,6 @@ export function validateStep(step, elements) {
     };
   }
 
-  const rules = step.validation?.requires || [];
   if (rules.length === 0) {
     return { valid: true, message: "Step completed! Proceed to the next step." };
   }
@@ -104,27 +107,40 @@ function evaluateRule(rule, elements) {
         }
       }
 
-      if (rule.angle !== undefined) {
-        const target = rule.angle;
+      if (rule.angle !== undefined || Array.isArray(rule.angles)) {
+        const targets = Array.isArray(rule.angles) ? rule.angles : [rule.angle];
         const matchingAngle = lines.find((l) => {
           let deg = Math.abs((Math.atan2(l.y2 - l.y1, l.x2 - l.x1) * 180) / Math.PI);
           if (deg > 90) deg = 180 - deg;
-          return Math.abs(deg - target) <= TOLERANCE.angle;
+          return targets.some((t) => Math.abs(deg - t) <= TOLERANCE.angle);
         });
 
         if (!matchingAngle) {
-          // Find closest angle for constructive feedback
+          const primaryTarget = targets[0];
           const angles = lines.map((l) => {
             let deg = Math.abs((Math.atan2(l.y2 - l.y1, l.x2 - l.x1) * 180) / Math.PI);
             if (deg > 90) deg = 180 - deg;
             return deg;
           });
-          const closest = Math.min(...angles.map((a) => Math.abs(a - target)));
-          const actualAngle = angles[angles.map((a) => Math.abs(a - target)).indexOf(closest)];
+          const closest = Math.min(...angles.map((a) => Math.abs(a - primaryTarget)));
+          const actualAngle = angles[angles.map((a) => Math.abs(a - primaryTarget)).indexOf(closest)];
+          const targetDesc = targets.length > 1 ? `${targets.join("° or ")}°` : `${primaryTarget}°`;
           return {
             valid: false,
-            message: `Expected line inclined at ${target}°. Found line at ${actualAngle.toFixed(1)}° (tolerance ±${TOLERANCE.angle}°).`,
-            suggestion: `Adjust the inclination angle closer to ${target}°. Check the HUD readout while drawing.`
+            message: `Expected line inclined at ${targetDesc}. Found line at ${actualAngle.toFixed(1)}° (tolerance ±${TOLERANCE.angle}°).`,
+            suggestion: `Adjust the inclination angle closer to ${targetDesc}. Check the HUD readout while drawing.`
+          };
+        }
+      }
+
+      if (rule.nearPoint) {
+        const [px, py] = rule.nearPoint;
+        const nearLine = lines.find((l) => pointToSegmentDist(px, py, l.x1, l.y1, l.x2, l.y2) <= TOLERANCE.distance * 2.5);
+        if (!nearLine) {
+          return {
+            valid: false,
+            message: `Expected line passing near key point (${px.toFixed(1)}, ${py.toFixed(1)}) mm.`,
+            suggestion: stepHintFallback(px, py)
           };
         }
       }
@@ -151,6 +167,17 @@ function evaluateRule(rule, elements) {
         }
       }
 
+      if (rule.inRegion === "rightSide") {
+        const rightCount = lines.filter((l) => Math.max(l.x1, l.x2) >= 0).length;
+        if (rightCount === 0) {
+          return {
+            valid: false,
+            message: "Draw the development geometry on the right half of the sheet (X ≥ 0 mm).",
+            suggestion: "Place your development baseline to the right of the orthographic Front View."
+          };
+        }
+      }
+
       return { valid: true };
     }
 
@@ -164,6 +191,14 @@ function evaluateRule(rule, elements) {
           valid: false,
           message: `Expected a polygon with ${rule.sides || "multiple"} sides.`,
           suggestion: "Use the Polygon generator in the toolbar to quickly place accurate regular polygons."
+        };
+      }
+
+      if (rule.sides && polys.length > 0 && !polys.some((p) => p.sides === rule.sides)) {
+        return {
+          valid: false,
+          message: `Expected a ${rule.sides}-sided polygon, found ${polys[0].sides} sides.`,
+          suggestion: `Set sides to ${rule.sides} in the Polygon generator.`
         };
       }
 
@@ -240,6 +275,33 @@ function evaluateRule(rule, elements) {
         }
       }
 
+      if (rule.inRegion === "aboveXY") {
+        const hasAbove = lines.some((l) => Math.max(l.y1, l.y2) > TOLERANCE.yReference);
+        if (!hasAbove) {
+          return {
+            valid: false,
+            message: "Draw the Front View ABOVE the XY line (where Y is positive).",
+            suggestion: "Extend vertical height upwards into the VP region."
+          };
+        }
+      }
+
+      return { valid: true };
+    }
+
+    case "arc": {
+      const hasCurve = elements.some(
+        (e) =>
+          (e.type === "circle" && (rule.inRegion !== "rightSide" || e.cx >= -5)) ||
+          (e.type === "line" && (rule.inRegion !== "rightSide" || Math.max(e.x1, e.x2) >= 0))
+      );
+      if (!hasCurve) {
+        return {
+          valid: false,
+          message: "Draw the radial arc / sector lines on the right side of the sheet.",
+          suggestion: "Use Circle or Line tool from apex O to construct the radial sector."
+        };
+      }
       return { valid: true };
     }
 
@@ -291,4 +353,16 @@ function evaluateRule(rule, elements) {
     default:
       return { valid: true };
   }
+}
+
+function pointToSegmentDist(px, py, x1, y1, x2, y2) {
+  const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+  if (l2 === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+}
+
+function stepHintFallback(px, py) {
+  return `Ensure the geometry connects through (${px.toFixed(1)}, ${py.toFixed(1)}) mm (check HUD coordinates).`;
 }
