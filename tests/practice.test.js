@@ -7,6 +7,7 @@ import {
   buildCustomQuestion,
   buildQuestionComprehension
 } from "../dist/js/customQuestionEngine.js";
+import { reconstructFrom2DStrokes } from "../dist/js/reconstruct3d.js";
 
 test("Anna University Question Bank contains at least 9 problems across 3 syllabus units", () => {
   assert.ok(QUESTIONS.length >= 9, `Expected at least 9 questions, found ${QUESTIONS.length}`);
@@ -171,4 +172,46 @@ test("buildCustomQuestion generates finite geometry, comprehension guides, and w
     const comp = buildQuestionComprehension(q);
     assert.ok(comp && comp.simplePositionRule && comp.baseOrientationRule && comp.calculations.length >= 2);
   }
+});
+
+test("reconstructFrom2DStrokes extracts live 3D solids and cuts from drafted HP & VP geometry", () => {
+  assert.deepEqual(reconstructFrom2DStrokes([]), { hasBase: false, hasSolid: false });
+
+  // 1. Base pentagon on HP only
+  const pentPts = [];
+  for (let i = 0; i < 5; i++) {
+    const a = (2 * Math.PI * i) / 5;
+    pentPts.push([-60 + 25 * Math.cos(a), -45 + 25 * Math.sin(a)]);
+  }
+  const baseOnly = [{ type: "polygon", sides: 5, edgeLength: 29.4, cx: -60, cy: -45, points: pentPts, grade: "HB" }];
+  const rBase = reconstructFrom2DStrokes(baseOnly);
+  assert.equal(rBase.hasBase, true);
+  assert.equal(rBase.hasSolid, false);
+  assert.equal(rBase.base.sides, 5);
+
+  // 2. Add upright Front View rectangle lines -> Prism
+  const prismStrokes = [
+    ...baseOnly,
+    { type: "line", x1: -80, y1: 0, x2: -80, y2: 55, grade: "HB" },
+    { type: "line", x1: -35, y1: 0, x2: -35, y2: 55, grade: "HB" },
+    { type: "line", x1: -80, y1: 55, x2: -35, y2: 55, grade: "HB" }
+  ];
+  const rPrism = reconstructFrom2DStrokes(prismStrokes);
+  assert.equal(rPrism.hasSolid, true);
+  assert.equal(rPrism.isPyramid, false);
+  assert.equal(rPrism.height, 55);
+
+  // 3. Converging apex + cutting plane -> Cut Pyramid
+  const pyramidCutStrokes = [
+    ...baseOnly,
+    { type: "line", x1: -80, y1: 0, x2: -60, y2: 65, grade: "HB" },
+    { type: "line", x1: -35, y1: 0, x2: -60, y2: 65, grade: "HB" },
+    { type: "line", x1: -85, y1: 7.5, x2: -35, y2: 57.5, grade: "Cutting Plane" }
+  ];
+  const rCutPyr = reconstructFrom2DStrokes(pyramidCutStrokes);
+  assert.equal(rCutPyr.hasSolid, true);
+  assert.equal(rCutPyr.isPyramid, true);
+  assert.equal(rCutPyr.height, 65);
+  assert.ok(rCutPyr.cutPlane && Math.abs(rCutPyr.cutPlane.angleDeg - 45) < 0.1);
+  assert.ok(Math.abs(rCutPyr.cutPlane.cutHeight - 32.5) < 0.1);
 });

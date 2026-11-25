@@ -30,6 +30,7 @@ export class PracticeCanvas {
     this.history = [];
     this.redoStack = [];
     this.onElementsChanged = null;
+    this.onPreviewChanged = null;
 
     // Interaction state
     this.isDrawing = false;
@@ -193,6 +194,9 @@ export class PracticeCanvas {
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointermove", (e) => this.onPointerMove(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    this.canvas.addEventListener("pointerleave", () => {
+      if (!this.isDrawing) this.onPreviewChanged?.(null);
+    });
     this.canvas.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -302,6 +306,18 @@ export class PracticeCanvas {
 
     this.currentWorldPos = worldPos;
     this.updateHud(pos, worldPos);
+    const rect = this.canvas.getBoundingClientRect();
+    const inside = pos.x >= 0 && pos.y >= 0 && pos.x <= rect.width && pos.y <= rect.height;
+    if (inside || this.isDrawing) {
+      this.onPreviewChanged?.({
+        worldPos,
+        isDrawing: this.isDrawing,
+        dragStart: this.dragStart,
+        tool: this.tool,
+        pencilGrade: this.pencilGrade,
+        activeSnap: this.activeSnap
+      });
+    }
     this.render();
   }
 
@@ -322,6 +338,14 @@ export class PracticeCanvas {
     const len = Math.hypot(end.x - start.x, end.y - start.y);
     if (len < 0.5 && this.tool !== "circle") {
       this.dragStart = null;
+      this.onPreviewChanged?.({
+        worldPos: end,
+        isDrawing: false,
+        dragStart: null,
+        tool: this.tool,
+        pencilGrade: this.pencilGrade,
+        activeSnap: this.activeSnap
+      });
       return;
     }
 
@@ -372,6 +396,14 @@ export class PracticeCanvas {
     }
 
     this.dragStart = null;
+    this.onPreviewChanged?.({
+      worldPos: end,
+      isDrawing: false,
+      dragStart: null,
+      tool: this.tool,
+      pencilGrade: this.pencilGrade,
+      activeSnap: this.activeSnap
+    });
     this.render();
   }
 

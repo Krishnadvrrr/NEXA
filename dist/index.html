@@ -404,13 +404,28 @@
                     <button type="button" class="view-pill active" data-pview="iso">Iso</button>
                     <button type="button" class="view-pill" data-pview="front">FV</button>
                     <button type="button" class="view-pill" data-pview="top">TV</button>
+                    <button type="button" class="view-pill" data-pview="side">SV</button>
                   </div>
+                  <button type="button" id="btnToggle3DRays" class="sync-mini-btn active" title="Toggle 3D projection rays">Rays</button>
                   <button type="button" id="btnToggle3DCol" class="toggle-col-btn" title="Toggle 3D side screen width">⛶</button>
+                </div>
+              </div>
+
+              <div class="practice-3d-sync-bar">
+                <div class="sync-fold-group">
+                  <button type="button" id="btnToggleFold" class="sync-mini-btn" title="Unfold HP 90° around XY into flat 2D sheet">Unfold 90°</button>
+                  <input id="hpFoldSlider" type="range" min="0" max="90" value="0" title="HP Dihedral Fold Angle (0° = 3D room, 90° = 2D sheet)" />
+                  <span id="hpFoldVal" class="sync-val">0°</span>
+                </div>
+                <div class="practice-3d-views">
+                  <button type="button" class="view-pill active" data-syncmode="stage" title="Guided 3D stage solid + live strokes">Stage</button>
+                  <button type="button" class="view-pill" data-syncmode="draft" title="Reconstruct 3D strictly from your 2D strokes">From 2D</button>
                 </div>
               </div>
 
               <div class="practice-3d-viewport" id="practice3dViewport">
                 <div id="practice3dHost"></div>
+                <div id="p3dTelemetry" class="p3d-telemetry" hidden></div>
                 <div class="viewport-hint">Drag to orbit · Scroll to zoom</div>
               </div>
 

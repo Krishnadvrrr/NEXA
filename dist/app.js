@@ -928,12 +928,15 @@ function initPracticeStudio() {
     console.warn("Live 3D Step Visualizer initialization failed", err);
   }
 
-  // Real-time mirroring of student's 2D canvas strokes on 3D HP/VP planes
+  // Real-time mirroring of student's 2D canvas strokes & live cursor/drag preview in 3D
   practiceCanvas.onElementsChanged = (elements) => {
     livePractice3D?.updateStrokes(elements);
   };
+  practiceCanvas.onPreviewChanged = (payload) => {
+    livePractice3D?.updateCursorAndPreview(payload);
+  };
 
-  // 3D preset views (Iso, FV, TV)
+  // 3D preset views (Iso, FV, TV, SV)
   document.querySelectorAll("[data-pview]").forEach((btn) => {
     btn.onclick = () => {
       document
@@ -943,6 +946,47 @@ function initPracticeStudio() {
       livePractice3D?.view(btn.dataset.pview);
     };
   });
+
+  // 3D Sync mode toggle (Stage vs From 2D)
+  document.querySelectorAll("[data-syncmode]").forEach((btn) => {
+    btn.onclick = () => {
+      document
+        .querySelectorAll("[data-syncmode]")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      livePractice3D?.setSyncMode(btn.dataset.syncmode);
+    };
+  });
+
+  // Projection rays toggle
+  if ($("btnToggle3DRays")) {
+    let raysOn = true;
+    $("btnToggle3DRays").onclick = () => {
+      raysOn = !raysOn;
+      $("btnToggle3DRays").classList.toggle("active", raysOn);
+      livePractice3D?.setShowRays(raysOn);
+    };
+  }
+
+  // Interactive HP Dihedral Fold / Unfold controls (0° = 3D room, 90° = 2D flat sheet)
+  if ($("hpFoldSlider") && $("btnToggleFold")) {
+    const syncFoldLabel = (deg) => {
+      $("hpFoldVal").textContent = `${Math.round(deg)}°`;
+      const isFlat = deg >= 45;
+      $("btnToggleFold").classList.toggle("active", isFlat);
+      $("btnToggleFold").textContent = isFlat ? "Fold 3D" : "Unfold 90°";
+    };
+    $("hpFoldSlider").addEventListener("input", () => {
+      const deg = Number($("hpFoldSlider").value) || 0;
+      livePractice3D?.setFoldAngle(deg, true);
+      syncFoldLabel(deg);
+    });
+    $("btnToggleFold").onclick = () => {
+      const next = (livePractice3D?.foldDeg || 0) >= 45 ? 0 : 90;
+      livePractice3D?.setFoldAngle(next, false);
+      syncFoldLabel(next);
+    };
+  }
 
   // Toggle 3D column size (standard vs expanded)
   const bodyEl = $("practiceWorkspaceBody");
