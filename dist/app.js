@@ -24,6 +24,11 @@ const defaults = {
   beta: 20,
   roll: 0,
   side: "right",
+  sectionEnabled: false,
+  cutAngle: 45,
+  cutHeightPct: 50,
+  explodeCut: false,
+  explodeDist: 28,
   construction: true,
   hidden: true,
   labels: true,
@@ -36,7 +41,8 @@ let state = { ...defaults },
   drawing,
   pending = false,
   lastSave = 0,
-  modelKey = "";
+  modelKey = "",
+  sectionKey = "";
 
 // Practice Studio state
 let customQuestions = loadCustomQuestions(),
@@ -68,6 +74,9 @@ function normalize() {
         Number.isFinite(state[key]) ? state[key] : defaults[key],
       ),
     );
+  state.cutAngle = Math.max(-75, Math.min(75, Number.isFinite(state.cutAngle) ? state.cutAngle : 45));
+  state.cutHeightPct = Math.max(10, Math.min(90, Number.isFinite(state.cutHeightPct) ? state.cutHeightPct : 50));
+  state.explodeDist = Math.max(0, Math.min(55, Number.isFinite(state.explodeDist) ? state.explodeDist : 28));
   state.beta = Math.min(state.beta, 90 - state.alpha);
   for (const key of ["solid", "side"])
     if (![...$(key).options].some((o) => o.value === state[key]))
@@ -86,6 +95,10 @@ function sync() {
   }
   for (const key of ["alpha", "beta", "roll"])
     $(key + "Value").textContent = state[key].toFixed(0) + "°";
+  if ($("cutAngleValue")) $("cutAngleValue").textContent = `${state.cutAngle.toFixed(0)}°`;
+  if ($("cutHeightPctValue")) $("cutHeightPctValue").textContent = `${state.cutHeightPct.toFixed(0)}%`;
+  if ($("explodeDistValue")) $("explodeDistValue").textContent = `${state.explodeDist.toFixed(0)} mm`;
+  if ($("sectionControls")) $("sectionControls").hidden = !state.sectionEnabled;
 
   const practice = state.mode === "practice";
 
@@ -127,14 +140,16 @@ function sync() {
     $("modeDescription").textContent = "";
     $("workspaceTitle").textContent = "First-angle projections";
     $("drawingTitle").innerHTML = "Orthographic sheet <span>2D</span>";
-    $("drawingTag").textContent = "FIRST ANGLE";
+    $("drawingTag").textContent = state.sectionEnabled ? "SECTION · FIRST ANGLE" : "FIRST ANGLE";
     $("height").disabled = state.solid === "cube";
     $("sizeLabel").textContent = ["cylinder", "cone"].includes(state.solid)
       ? "Base radius"
       : "Base edge";
     $("hidden").closest("label").hidden = false;
     document.querySelectorAll("[data-view]").forEach((b) => (b.disabled = false));
-    $("angleStatus").textContent = `α ${state.alpha}° · β ${state.beta}°`;
+    $("angleStatus").textContent = state.sectionEnabled
+      ? `α ${state.alpha}° · β ${state.beta}° · θ ${state.cutAngle}°`
+      : `α ${state.alpha}° · β ${state.beta}°`;
   }
 }
 
@@ -142,6 +157,16 @@ function save() {
   try {
     localStorage.setItem("eg-studio-v1", JSON.stringify(state));
   } catch {}
+}
+
+function getSectionPayload() {
+  return {
+    enabled: Boolean(state.sectionEnabled),
+    angleDeg: Number(state.cutAngle) || 45,
+    heightPct: Number(state.cutHeightPct) || 50,
+    explodeEnabled: Boolean(state.explodeCut),
+    explodeDist: Number(state.explodeDist) || 0,
+  };
 }
 
 function render() {
@@ -163,10 +188,20 @@ function render() {
     state.beta,
     state.roll,
   ].join(":");
-  if (key !== modelKey) {
-    model = buildSolid(state);
-    renderer?.update(model);
-    modelKey = key;
+  const sKey = [
+    state.sectionEnabled,
+    state.cutAngle,
+    state.cutHeightPct,
+    state.explodeCut,
+    state.explodeDist,
+  ].join(":");
+  if (key !== modelKey || sKey !== sectionKey) {
+    if (key !== modelKey) {
+      model = buildSolid(state);
+      modelKey = key;
+    }
+    renderer?.update(model, getSectionPayload());
+    sectionKey = sKey;
   }
   drawing = solidDrawing(model, state);
   $("insightTitle").textContent = "Follow the projectors";
@@ -262,11 +297,18 @@ $("collapse").onclick = () => {
 
 $("reset").onclick = () => {
   state = { ...defaults, mode: state.mode };
+  sectionKey = "";
   render();
   renderer?.view("iso");
   $("notice").textContent = "Workspace reset.";
   save();
 };
+
+if ($("btnInspectCutSidebar")) {
+  $("btnInspectCutSidebar").onclick = () => {
+    renderer?.view("inspectCut");
+  };
+}
 
 function svgPoint(event) {
   const p = new DOMPoint(event.clientX, event.clientY);
@@ -714,16 +756,25 @@ function initPracticeStudio() {
       const sizeParam = isCurvedSolid
         ? p.radius || (p.diameter ? p.diameter / 2 : 20)
         : p.baseEdge || 30;
+      const hParam = p.height || 60;
       const previewModel = buildSolid({
         solid: solidType,
         size: sizeParam,
-        height: p.height || 60,
+        height: hParam,
         alpha: p.alpha !== undefined ? p.alpha : 90,
         beta: p.beta || 0,
         roll: 0,
       });
 
-      preview3dRenderer.update(previewModel);
+      const isSectionProblem = currentQuestion.unit === "Section of Solids" || currentQuestion.unit === "Development of Surfaces";
+      const cutPct = isSectionProblem ? Math.max(15, Math.min(85, ((p.cutHeight || hParam / 2) / hParam) * 100)) : 50;
+      preview3dRenderer.update(previewModel, {
+        enabled: isSectionProblem,
+        angleDeg: p.cuttingAngle || 45,
+        heightPct: cutPct,
+        explodeEnabled: isSectionProblem,
+        explodeDist: isSectionProblem ? 18 : 0,
+      });
       preview3dRenderer.view("iso");
     } catch (err) {
       host.textContent = "3D WebGL renderer unavailable. Ensure WebGL support.";
@@ -960,14 +1011,23 @@ render();
 // Setup 3D visualizer for the Projections mode
 try {
   const { createRenderer } = await import("./js/renderer3d.js");
-  renderer = createRenderer($("threeHost"));
-  renderer.update(model || buildSolid(state));
+  renderer = createRenderer($("threeHost"), {
+    onSectionUpdate: ({ explodeEnabled, explodeDist }) => {
+      state.explodeCut = Boolean(explodeEnabled);
+      state.explodeDist = Number(explodeDist) || 0;
+      sync();
+      save();
+    },
+  });
+  renderer.update(model || buildSolid(state), getSectionPayload());
   renderer.view("iso");
-  $("threeLoading").remove();
+  $("threeLoading")?.remove();
   $("status").textContent = "Geometry engine ready";
 } catch (error) {
-  $("threeLoading").textContent =
-    "3D unavailable. Check WebGL support and your connection to jsDelivr. The 2D studio and exports remain available.";
+  if ($("threeLoading")) {
+    $("threeLoading").textContent =
+      "3D unavailable. Check WebGL support and your connection to jsDelivr. The 2D studio and exports remain available.";
+  }
   $("status").textContent = "2D studio ready · 3D unavailable";
   console.error(error);
 }

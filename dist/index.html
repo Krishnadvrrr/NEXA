@@ -111,6 +111,25 @@
             <option value="right">Right side · placed left of FV</option>
             <option value="left">Left side · placed right of FV</option>
           </select>
+          <h2>Section of solids</h2>
+          <label class="check"
+            ><input id="sectionEnabled" type="checkbox" /> Live section plane (AIP)</label
+          >
+          <div id="sectionControls" hidden>
+            <label class="range-label" for="cutAngle"
+              >Cut plane angle θ <output id="cutAngleValue">45°</output></label
+            ><input id="cutAngle" type="range" min="-75" max="75" value="45" />
+            <label class="range-label" for="cutHeightPct"
+              >Cut elevation <output id="cutHeightPctValue">50%</output></label
+            ><input id="cutHeightPct" type="range" min="10" max="90" value="50" />
+            <label class="check"
+              ><input id="explodeCut" type="checkbox" /> Explode / Lift cut piece</label
+            >
+            <label class="range-label" for="explodeDist"
+              >Lift distance <output id="explodeDistValue">28 mm</output></label
+            ><input id="explodeDist" type="range" min="0" max="55" value="28" />
+            <button type="button" id="btnInspectCutSidebar" class="secondary-btn" style="margin-top: 8px; width: 100%">⌖ Inspect True Shape</button>
+          </div>
         </section>
         <section id="practiceControls" hidden>
           <div class="practice-top-actions">

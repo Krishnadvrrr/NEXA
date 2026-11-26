@@ -18,7 +18,7 @@ export const text = (x, y, t, cls = "label", anchor = "middle") =>
 export const path = (points, cls = "outline") =>
   `<path class="${cls}" d="${points.map((p, i) => (i ? "L" : "M") + p.join(",")).join(" ")}"/>`;
 export function drawingStyles(print = false) {
-  return `<style>.outline{fill:none;stroke:${print ? "#142029" : "#ffffff"};stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}.hidden{fill:none;stroke:${print ? "#475561" : "#888888"};stroke-width:1.3;stroke-dasharray:7 5}.axis{fill:none;stroke:${print ? "#657480" : "#666666"};stroke-width:1;stroke-dasharray:16 4 2 4}.construction{fill:none;stroke:${print ? "#a2aab0" : "#444444"};stroke-width:.7}.dimension{fill:none;stroke:${print ? "#72500e" : "#f5b95d"};stroke-width:1}.label,.dimtext,.viewtitle{fill:${print ? "#17212b" : "#e5e5e5"};font:14px 'Segoe UI',sans-serif}.dimtext{fill:${print ? "#72500e" : "#f5b95d"};font-size:13px}.viewtitle{font-size:14px;letter-spacing:2px}.focus{fill:${print ? "#17212b" : "#ffffff"}}.normal{fill:none;stroke:${print ? "#697583" : "#aaaaaa"};stroke-width:1.3;stroke-dasharray:6 4}.tangent{fill:none;stroke:${print ? "#72500e" : "#f5b95d"};stroke-width:1.5}</style>`;
+  return `<style>.outline{fill:none;stroke:${print ? "#142029" : "#ffffff"};stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}.hidden{fill:none;stroke:${print ? "#475561" : "#888888"};stroke-width:1.3;stroke-dasharray:7 5}.axis{fill:none;stroke:${print ? "#657480" : "#666666"};stroke-width:1;stroke-dasharray:16 4 2 4}.section-plane{fill:none;stroke:#38bdf8;stroke-width:2.2;stroke-dasharray:14 4 3 4}.construction{fill:none;stroke:${print ? "#a2aab0" : "#444444"};stroke-width:.7}.dimension{fill:none;stroke:${print ? "#72500e" : "#f5b95d"};stroke-width:1}.label,.dimtext,.viewtitle{fill:${print ? "#17212b" : "#e5e5e5"};font:14px 'Segoe UI',sans-serif}.dimtext{fill:${print ? "#72500e" : "#f5b95d"};font-size:13px}.viewtitle{font-size:14px;letter-spacing:2px}.focus{fill:${print ? "#17212b" : "#ffffff"}}.normal{fill:none;stroke:${print ? "#697583" : "#aaaaaa"};stroke-width:1.3;stroke-dasharray:6 4}.tangent{fill:none;stroke:${print ? "#72500e" : "#f5b95d"};stroke-width:1.5}</style>`;
 }
 export function dimension(a, b, label) {
   const dx = b[0] - a[0],
@@ -153,6 +153,20 @@ export function solidDrawing(model, s) {
         ((maxy - miny) / scale).toFixed(1),
       );
     }
+  }
+  if (s.sectionEnabled) {
+    const ymin = Math.min(...ys);
+    const frac = Math.max(0.08, Math.min(0.92, (s.cutHeightPct ?? 50) / 100));
+    const cutY = ymin + (ymax - ymin) * frac;
+    const cx = (xmin + xmax) / 2;
+    const rad = ((s.cutAngle ?? 45) * Math.PI) / 180;
+    const halfSpan = Math.max(width, ymax - ymin) * 0.72;
+    const dx = halfSpan * Math.cos(rad);
+    const dy = halfSpan * Math.sin(rad);
+    const p1 = fv([cx - dx, cutY - dy, 0]);
+    const p2 = fv([cx + dx, cutY + dy, 0]);
+    out += line(p1, p2, "section-plane");
+    out += text(p2[0] + 8, p2[1] - 4, `AIP ${s.cutAngle ?? 45}°`, "dimtext", "start");
   }
   return {
     body: out,

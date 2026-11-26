@@ -9,6 +9,15 @@ import {
 } from "../dist/js/geometry.js";
 import { solidDrawing } from "../dist/js/drafting.js";
 import { sheetSVG } from "../dist/js/export.js";
+import {
+  AUTOCAD_3D_ARCHITECTURE,
+  VISUAL_STYLE_SPECS,
+  mapVisualStyleConfig,
+  computeCutPlaneBasis,
+  computeSectionTrueShapeMetrics,
+  resolveCameraPresetBasis,
+  splitPolyhedronByPlane
+} from "../dist/js/reaSpecMapper.js";
 const state = {
   solid: "cube",
   size: 30,
@@ -104,4 +113,45 @@ test("solid drawing and sheet export contain finite coordinates and escaped user
   assert.ok(!svg.includes("<script>"));
   assert.ok(svg.includes('width="297mm"'));
   assert.ok(svg.includes("FIRST ANGLE"));
+});
+
+test("REA spec mapper, visual styles, half-space slicer, and True Shape metrics stay exact and finite", () => {
+  assert.ok(AUTOCAD_3D_ARCHITECTURE.visualStyles.verification);
+  assert.equal(VISUAL_STYLE_SPECS.length, 7);
+  assert.equal(mapVisualStyleConfig("conceptual").id, "conceptual");
+  assert.equal(mapVisualStyleConfig("blueprint").id, "blueprint");
+
+  const cube = buildSolid({ ...state, solid: "cube", size: 40, alpha: 90, beta: 0 });
+  const xs = cube.vertices.map((p) => p[0]);
+  const ys = cube.vertices.map((p) => p[1]);
+  const zs = cube.vertices.map((p) => p[2]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+
+  // Horizontal cut on upright 40mm cube produces an exact 40x40 = 1600 mm^2 cap with 160 mm perimeter
+  const horizBasis = computeCutPlaneBasis(0, cy, cx, cz);
+  const slicedHoriz = splitPolyhedronByPlane(cube, horizBasis);
+  assert.equal(slicedHoriz.capPoly.length, 4);
+  assert.ok(slicedHoriz.lowerPolyData.vertices.length >= 8);
+  assert.ok(slicedHoriz.upperPolyData.vertices.length >= 8);
+
+  const metricsHoriz = computeSectionTrueShapeMetrics(slicedHoriz.capPoly);
+  assert.ok(Math.abs(metricsHoriz.areaMm2 - 1600) < 1e-4, `Expected area 1600, got ${metricsHoriz.areaMm2}`);
+  assert.ok(Math.abs(metricsHoriz.perimeterMm - 160) < 1e-4);
+
+  // 45-degree inclined cut through center produces a wider True Shape rectangle (40 * 40*sqrt(2) = ~2262.7 mm^2)
+  const tiltBasis = computeCutPlaneBasis(45, cy, cx, cz);
+  const slicedTilt = splitPolyhedronByPlane(cube, tiltBasis);
+  const metricsTilt = computeSectionTrueShapeMetrics(slicedTilt.capPoly);
+  assert.ok(metricsTilt.areaMm2 > 2200 && metricsTilt.areaMm2 < 2300);
+
+  // Inspect cut camera aligns perpendicular to cut face normal
+  const inspectBasis = resolveCameraPresetBasis("inspectCut", tiltBasis);
+  const dotNorm = Math.abs(
+    inspectBasis.dir[0] * tiltBasis.normal[0] +
+    inspectBasis.dir[1] * tiltBasis.normal[1] +
+    inspectBasis.dir[2] * tiltBasis.normal[2]
+  );
+  assert.ok(dotNorm > 0.999);
 });
