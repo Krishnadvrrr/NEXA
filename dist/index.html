@@ -181,6 +181,7 @@
             </div>
             <h4 id="stepTitle" class="step-title">Step Title</h4>
             <p id="stepInstruction" class="step-text">Draw the horizontal reference line...</p>
+            <div id="stepAutoCadHint" class="step-autocad-cmd">💻 Type L + Space to start</div>
             <details id="stepHintDetails" class="hint-details">
               <summary>💡 Helpful Drafting Hint</summary>
               <p id="stepHint">Hint content...</p>
@@ -277,97 +278,144 @@
         </div>
 
         <div id="practiceWorkspace" class="practice-workspace" hidden>
-          <div class="cad-toolbar">
-            <div class="tool-group">
-              <button type="button" class="cad-tool-btn active" data-tool="line" title="Line Tool (L) — click-click or drag">
-                <span class="tool-icon">╱</span> Line
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="polygon" title="Polygon Generator (P) — Regular polygons">
-                <span class="tool-icon">⬡</span> Polygon
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="circle" title="Circle Tool (C) — Base and generator circles">
-                <span class="tool-icon">○</span> Circle
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="projector" title="Smart Projector (J) — Strict vertical/horizontal alignment">
-                <span class="tool-icon">⇕</span> Projector
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="text" title="Vertex Label (T) — a, b, c or a', b', c'">
-                <span class="tool-icon">T</span> Label
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="dimension" title="Dimension Tool (D) — Add mm dimension lines">
-                <span class="tool-icon">↔</span> Dim
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="eraser" title="Eraser Tool (E) — Click element to delete">
-                <span class="tool-icon">⌫</span> Erase
-              </button>
-              <button type="button" class="cad-tool-btn" data-tool="pan" title="Pan Canvas (Space+Drag)">
-                <span class="tool-icon">✋</span> Pan
-              </button>
-            </div>
-
-            <span class="cad-divider"></span>
-
-            <div class="grade-group">
-              <select id="pencilGradeSelect" class="grade-select" title="Engineering Line Weight / Pencil Grade">
-                <option value="HB">HB · Outline (0.7 mm)</option>
-                <option value="2H">2H · Projector (0.25 mm)</option>
-                <option value="Hidden">Hidden · Dashed (0.4 mm)</option>
-                <option value="Axis">Axis · Centerline (0.3 mm)</option>
-                <option value="Cutting Plane">Cut Plane · Section (0.7 mm)</option>
-              </select>
-            </div>
-
-            <span class="cad-divider"></span>
-
-            <div class="constraint-group">
-              <button type="button" id="btnToggleOrtho" class="toggle-tool-btn" title="Toggle Orthogonal Lock (Shift)">
-                Ortho: OFF
-              </button>
-              <button type="button" id="btnToggleAngleSnap" class="toggle-tool-btn active" title="Toggle Polar Angle Snapping (15° increments & relative to snapped edges)">
-                Snap: 15°
-              </button>
-              <div class="cad-lock-pill" title="Lock line angle in degrees (type or pick 30°, 45°, 60°, etc.)">
-                <span class="lock-prefix">∠</span>
-                <input id="angleLockInput" type="number" step="any" min="-360" max="360" placeholder="Free" list="commonAnglesList" aria-label="Lock angle in degrees" />
-                <span class="lock-unit">°</span>
-                <button type="button" id="btnAngleRelMode" class="mini-mode-btn" title="Angle reference: XY horizontal or relative to snapped edge">XY</button>
-                <button type="button" id="btnClearAngleLock" class="mini-clear-btn" hidden title="Unlock angle">×</button>
+          <!-- AutoCAD Home Ribbon Bar -->
+          <div class="acad-ribbon" role="toolbar" aria-label="AutoCAD Home Ribbon">
+            <div class="ribbon-panel">
+              <div class="ribbon-buttons">
+                <button type="button" class="ribbon-tool-btn" data-tool="select" title="Select / Window & Crossing Box (Esc)">
+                  <span class="r-icon">↖</span><span>Select</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn active" data-tool="line" title="LINE (L) — Draw straight line segments">
+                  <span class="r-icon">╱</span><span>Line</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="polyline" title="PLINE (PL) — Connected multi-segment polyline">
+                  <span class="r-icon">⌇</span><span>Polyline</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="circle" title="CIRCLE (C) — Center + radius">
+                  <span class="r-icon">○</span><span>Circle</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="arc" title="ARC (A) — 3-Point Arc">
+                  <span class="r-icon">◠</span><span>Arc</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="rect" title="RECTANG (REC) — Click corner then @dx,dy">
+                  <span class="r-icon">▭</span><span>Rect</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="polygon" title="POLYGON (POL) — Regular N-gon">
+                  <span class="r-icon">⬡</span><span>Polygon</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="projector" title="XLINE (XL) — Construction / Projector ray">
+                  <span class="r-icon">⇕</span><span>XLine</span>
+                </button>
               </div>
-              <div class="cad-lock-pill" title="Lock exact segment length in mm (optional)">
-                <span class="lock-prefix">L</span>
-                <input id="lengthLockInput" type="number" step="any" min="1" max="400" placeholder="Free" aria-label="Lock length in mm" />
-                <span class="lock-unit">mm</span>
-                <button type="button" id="btnClearLengthLock" class="mini-clear-btn" hidden title="Unlock length">×</button>
-              </div>
-              <datalist id="commonAnglesList">
-                <option value="15"></option>
-                <option value="30"></option>
-                <option value="40"></option>
-                <option value="45"></option>
-                <option value="60"></option>
-                <option value="75"></option>
-                <option value="90"></option>
-                <option value="120"></option>
-                <option value="135"></option>
-                <option value="150"></option>
-              </datalist>
+              <div class="ribbon-panel-title">Draw</div>
             </div>
 
-            <span class="cad-divider"></span>
+            <div class="ribbon-panel">
+              <div class="ribbon-buttons">
+                <button type="button" class="ribbon-tool-btn" data-tool="move" title="MOVE (M) — Displace selected objects">
+                  <span class="r-icon">✥</span><span>Move</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="copy" title="COPY (CO) — Duplicate selected objects">
+                  <span class="r-icon">⧉</span><span>Copy</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="rotate" title="ROTATE (RO) — Rotate around base point">
+                  <span class="r-icon">↻</span><span>Rotate</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="mirror" title="MIRROR (MI) — Reflect across mirror line">
+                  <span class="r-icon">◫</span><span>Mirror</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="trim" title="TRIM (TR) — Click overhanging span to cut">
+                  <span class="r-icon">✂</span><span>Trim</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="extend" title="EXTEND (EX) — Extend segment end to boundary">
+                  <span class="r-icon">⤢</span><span>Extend</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="offset" title="OFFSET (O) — Parallel copy at distance">
+                  <span class="r-icon">‖</span><span>Offset</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="eraser" title="ERASE (E) — Delete geometry">
+                  <span class="r-icon">⌫</span><span>Erase</span>
+                </button>
+              </div>
+              <div class="ribbon-panel-title">Modify</div>
+            </div>
 
-            <div class="history-group">
-              <button type="button" id="canvasUndo" class="cad-icon-btn" disabled title="Undo (Ctrl+Z)">↶</button>
-              <button type="button" id="canvasRedo" class="cad-icon-btn" disabled title="Redo (Ctrl+Y)">↷</button>
-              <button type="button" id="btnResetView" class="cad-icon-btn" title="Fit Viewport">⌖ Fit</button>
-              <span id="canvasZoomLevel" class="zoom-pill">100%</span>
+            <div class="ribbon-panel">
+              <div class="ribbon-buttons">
+                <button type="button" class="ribbon-tool-btn" data-tool="dimlinear" title="DIMLINEAR (DLI) — Horizontal / Vertical dimension">
+                  <span class="r-icon">↔</span><span>Linear</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="dimension" title="DIMALIGNED (DAL) — Aligned slope dimension">
+                  <span class="r-icon">⤢</span><span>Aligned</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="dimangular" title="DIMANGULAR (DAN) — Pick 2 lines for angle">
+                  <span class="r-icon">∠</span><span>Angular</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="text" title="TEXT (T) — Vertex labels (a, a', b, b')">
+                  <span class="r-icon">T</span><span>Text</span>
+                </button>
+              </div>
+              <div class="ribbon-panel-title">Annotation</div>
+            </div>
+
+            <div class="ribbon-panel ribbon-layers-panel">
+              <div class="ribbon-buttons layer-controls-wrap">
+                <div class="acad-layer-picker">
+                  <button type="button" id="btnLayerDropdown" class="acad-layer-btn" title="Open Layer Properties Manager">
+                    <span id="activeLayerSwatch" class="layer-color-dot" style="background:#ffffff"></span>
+                    <span id="activeLayerName">Visible_Outline (0.50mm)</span>
+                    <span class="layer-caret">▾</span>
+                  </button>
+                  <div id="acadLayerMenu" class="acad-layer-menu" hidden></div>
+                </div>
+                <select id="pencilGradeSelect" class="grade-select-compact" title="Quick Layer / Pencil Grade" hidden>
+                  <option value="HB">Visible_Outline (HB)</option>
+                  <option value="2H">Projectors_Const (2H)</option>
+                  <option value="Hidden">Hidden_Edges</option>
+                  <option value="Axis">Axis_Center</option>
+                  <option value="Cutting Plane">Cutting_Plane</option>
+                </select>
+                <div class="cad-lock-pill" title="Lock explicit line angle (degrees)">
+                  <span class="lock-prefix">∠</span>
+                  <input id="angleLockInput" type="number" step="any" min="-360" max="360" placeholder="Free" list="commonAnglesList" aria-label="Lock angle in degrees" />
+                  <span class="lock-unit">°</span>
+                  <button type="button" id="btnAngleRelMode" class="mini-mode-btn" title="Angle reference: XY or Edge">XY</button>
+                  <button type="button" id="btnClearAngleLock" class="mini-clear-btn" hidden title="Unlock angle">×</button>
+                </div>
+                <div class="cad-lock-pill" title="Lock explicit segment length (mm)">
+                  <span class="lock-prefix">L</span>
+                  <input id="lengthLockInput" type="number" step="any" min="1" max="400" placeholder="Free" aria-label="Lock length in mm" />
+                  <span class="lock-unit">mm</span>
+                  <button type="button" id="btnClearLengthLock" class="mini-clear-btn" hidden title="Unlock length">×</button>
+                </div>
+                <datalist id="commonAnglesList">
+                  <option value="15"></option><option value="30"></option><option value="40"></option>
+                  <option value="45"></option><option value="60"></option><option value="75"></option>
+                  <option value="90"></option><option value="120"></option><option value="135"></option>
+                </datalist>
+                <button type="button" id="canvasUndo" class="cad-icon-btn" disabled title="Undo (U / Ctrl+Z)">↶</button>
+                <button type="button" id="canvasRedo" class="cad-icon-btn" disabled title="Redo (Ctrl+Y)">↷</button>
+                <button type="button" class="ribbon-tool-btn" data-tool="zoom_extents" title="ZOOM Extents (Z)">⌖ Fit</button>
+                <button type="button" class="ribbon-tool-btn" data-tool="pan" title="PAN (P / Middle-Mouse Drag)">✋</button>
+                <span id="canvasZoomLevel" class="zoom-pill">100%</span>
+              </div>
+              <div class="ribbon-panel-title">Layers &amp; Precision</div>
+            </div>
+
+            <div class="ribbon-panel ribbon-coach-panel">
+              <div class="ribbon-buttons coach-mode-btns">
+                <button type="button" id="btnLearningGuided" class="coach-mode-btn active" title="Shows EG steps + exact AutoCAD commands">Guided EG</button>
+                <button type="button" id="btnLearningPure" class="coach-mode-btn" title="Hides step hints & ghost guides for independent AutoCAD practice">Pure AutoCAD</button>
+              </div>
+              <div class="ribbon-panel-title">Learning Mode</div>
             </div>
           </div>
 
           <div class="practice-workspace-body" id="practiceWorkspaceBody">
-            <div class="practice-canvas-host" id="practiceCanvasHost">
+            <div class="practice-canvas-host acad-model-space" id="practiceCanvasHost">
               <canvas id="draftingCanvas"></canvas>
               <div id="snapBadge" class="snap-badge"></div>
-              <div id="canvasHud" class="canvas-hud">X: 0.0 mm | Y: 0.0 mm [HP (Top View)]</div>
+              <div id="canvasHud" class="canvas-hud">X: 0.0 · Y: 0.0 mm [HP (Top View)]</div>
             </div>
 
             <!-- Side screen column for Live Step-by-Step 3D Visualization -->
@@ -413,6 +461,55 @@
                   In 3D reality, your drafted Top View is a physical 2D base lying directly on the Horizontal Plane (HP).
                 </p>
               </div>
+            </div>
+          </div>
+
+          <!-- Paper Space Layout1 Preview (hidden unless Layout1 tab clicked) -->
+          <div id="acadLayoutSheetView" class="acad-layout-view" hidden>
+            <div class="layout-bar">
+              <span>Paper Space Preview · Standard EG Title Block (BIS / First-Angle Symbol)</span>
+              <div class="layout-actions">
+                <select id="acadLayoutPaper" aria-label="Layout paper size">
+                  <option value="A4">A4 (297 × 210 mm)</option>
+                  <option value="A3">A3 (420 × 297 mm)</option>
+                </select>
+                <button type="button" id="btnLayoutExportSVG" class="vc-mini-btn">Download SVG</button>
+                <button type="button" id="btnLayoutExportPNG" class="vc-mini-btn active">Download 300 dpi PNG</button>
+              </div>
+            </div>
+            <div id="acadLayoutPreviewHost" class="layout-preview-host"></div>
+          </div>
+
+          <!-- Docked AutoCAD Command Line + Habit Coach Bar -->
+          <div class="acad-cmd-dock" id="acadCommandDock">
+            <div class="cmd-top-row">
+              <div id="acadCmdHistory" class="cmd-history">
+                <div class="cmd-log-line sys">AutoCAD Model Space initialized. Type command alias (L, PL, C, A, REC, XL, M, CO, RO, TR, EX, O) or pick from Ribbon.</div>
+              </div>
+              <div id="acadCoachTip" class="acad-coach-tip" hidden></div>
+            </div>
+            <div class="cmd-input-row">
+              <div id="acadCmdSuggest" class="cmd-suggest-pop" hidden></div>
+              <span id="acadCmdPrompt" class="cmd-prompt-lbl">LINE Specify first point:</span>
+              <input id="acadCmdInput" type="text" class="cmd-input" autocomplete="off" spellcheck="false" placeholder="Type command (L, REC, C, M, TR...) or @dx,dy / len<angle and press Enter/Space" />
+            </div>
+          </div>
+
+          <!-- Bottom Workspace Model/Layout Tabs + Function-Key Status Bar -->
+          <div class="acad-status-bar" id="acadStatusBar">
+            <div class="space-tabs">
+              <button type="button" id="tabModelSpace" class="space-tab active">Model</button>
+              <button type="button" id="tabLayoutSheet" class="space-tab">Layout1 (A4/A3)</button>
+            </div>
+            <span id="acadStatusCoords" class="status-coords">0.0, 0.0, 0.0 mm</span>
+            <div class="aid-toggles">
+              <button type="button" id="btnStatusGrid" class="aid-btn active" title="Toggle Grid Display (F7)">GRID (F7)</button>
+              <button type="button" id="btnStatusSnap" class="aid-btn" title="Toggle Grid Snap (F9)">SNAP (F9)</button>
+              <button type="button" id="btnStatusOrtho" class="aid-btn" title="Toggle Orthogonal Lock (F8 / Shift)">ORTHO (F8)</button>
+              <button type="button" id="btnStatusPolar" class="aid-btn active" title="Toggle Polar Tracking (F10)">POLAR (F10)</button>
+              <button type="button" id="btnStatusOsnap" class="aid-btn active" title="Toggle Object Snap (F3)">OSNAP (F3)</button>
+              <button type="button" id="btnStatusDyn" class="aid-btn active" title="Toggle Dynamic Input beside cursor (F12)">DYNMODE (F12)</button>
+              <button type="button" id="btnStatusLwt" class="aid-btn active" title="Show/Hide Layer Lineweights">LWT</button>
             </div>
           </div>
         </div>

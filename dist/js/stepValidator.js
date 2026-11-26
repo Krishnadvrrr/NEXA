@@ -11,6 +11,42 @@ export const TOLERANCE = {
   yReference: 3.0  // near XY line (Y ≈ 0)
 };
 
+function expandValidationElements(elements) {
+  const expanded = [];
+  for (const el of elements) {
+    expanded.push(el);
+    if ((el.type === "polyline" || el.type === "polygon") && Array.isArray(el.points) && el.points.length >= 2) {
+      const count = el.type === "polygon" || el.closed ? el.points.length : el.points.length - 1;
+      for (let i = 0; i < count; i++) {
+        const a = el.points[i];
+        const b = el.points[(i + 1) % el.points.length];
+        expanded.push({
+          type: "line",
+          x1: a[0],
+          y1: a[1],
+          x2: b[0],
+          y2: b[1],
+          grade: el.grade || "HB"
+        });
+      }
+      if (el.type === "polyline" && el.closed && el.points.length >= 3) {
+        const xs = el.points.map((p) => p[0]);
+        const ys = el.points.map((p) => p[1]);
+        const e0 = Math.hypot(el.points[1][0] - el.points[0][0], el.points[1][1] - el.points[0][1]);
+        expanded.push({
+          type: "polygon",
+          sides: el.points.length,
+          edgeLength: e0,
+          cx: (Math.min(...xs) + Math.max(...xs)) / 2,
+          cy: (Math.min(...ys) + Math.max(...ys)) / 2,
+          points: el.points
+        });
+      }
+    }
+  }
+  return expanded;
+}
+
 export function validateStep(step, elements) {
   if (!step) return { valid: true, message: "Free practice mode. No constraints." };
   const rules = step.validation?.requires || [];
@@ -29,9 +65,11 @@ export function validateStep(step, elements) {
     return { valid: true, message: "Step completed! Proceed to the next step." };
   }
 
+  const normalized = expandValidationElements(elements);
+
   // Evaluate each rule
   for (const rule of rules) {
-    const result = evaluateRule(rule, elements);
+    const result = evaluateRule(rule, normalized);
     if (!result.valid) {
       return result;
     }

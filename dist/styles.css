@@ -1565,3 +1565,450 @@ dialog .primary {
     height: 400px;
   }
 }
+
+/* =========================================================================
+   AUTOCAD MODEL SPACE WORKSPACE (PRACTICE STUDIO)
+   ========================================================================= */
+.practice-mode .workspace {
+  padding: 12px 16px;
+}
+.acad-ribbon {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  background: #14181f;
+  border: 1px solid #262e3a;
+  border-radius: 6px;
+  padding: 6px 10px 4px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.ribbon-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-right: 8px;
+  border-right: 1px solid #262e3a;
+  gap: 4px;
+}
+.ribbon-panel:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+.ribbon-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.ribbon-panel-title {
+  font-size: 9px;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: #6b7b8e;
+  text-align: center;
+}
+.ribbon-tool-btn {
+  background: #1c222b;
+  border: 1px solid #2b3442;
+  color: #cfd8e3;
+  font-size: 10.5px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.ribbon-tool-btn:hover {
+  background: #28313e;
+  color: #ffffff;
+  border-color: #475569;
+}
+.ribbon-tool-btn.active {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+  font-weight: 700;
+}
+.r-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+.acad-layer-picker {
+  position: relative;
+}
+.acad-layer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0f1318;
+  border: 1px solid #2d3748;
+  color: #e2e8f0;
+  font-size: 10.5px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  height: 27px;
+  white-space: nowrap;
+}
+.acad-layer-btn:hover {
+  border-color: #64748b;
+}
+.layer-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.acad-layer-menu {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  width: 280px;
+  background: #11161d;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px;
+  z-index: 40;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8);
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 5px;
+  border-radius: 4px;
+}
+.layer-row.active {
+  background: #1e293b;
+}
+.layer-vis-btn,
+.layer-lock-btn {
+  background: transparent;
+  border: 1px solid #2a3441;
+  color: #94a3b8;
+  padding: 2px 4px;
+  font-size: 10.5px;
+  border-radius: 3px;
+}
+.layer-vis-btn.on {
+  color: #facc15;
+}
+.layer-lock-btn.locked {
+  color: #f87171;
+  border-color: #7f1d1d;
+}
+.layer-select-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  text-align: left;
+  color: #e2e8f0;
+}
+.layer-select-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.layer-name {
+  font-size: 11px;
+  font-weight: 600;
+}
+.layer-meta {
+  font-size: 9.5px;
+  color: #8899aa;
+}
+.coach-mode-btn {
+  font-size: 10.5px;
+  padding: 4px 8px;
+  background: #1c222b;
+  border: 1px solid #2b3442;
+  color: #94a3b8;
+  border-radius: 4px;
+}
+.coach-mode-btn.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 700;
+}
+
+/* Deep Slate-Charcoal Model Space Canvas (#212830) */
+.acad-model-space {
+  background: #212830 !important;
+  cursor: none;
+}
+.acad-model-space canvas {
+  background: #212830;
+}
+.practice-canvas-host,
+.practice-3d-column {
+  height: clamp(440px, calc(100vh - 340px), 590px);
+}
+
+/* AutoCAD DYNMODE (F12) Floating Boxes beside Crosshair */
+.acad-dyn-hud {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 20;
+  pointer-events: auto;
+}
+.dyn-box-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(15, 20, 26, 0.94);
+  border: 1px solid #475569;
+  border-radius: 3px;
+  padding: 2px 5px;
+  height: 23px;
+}
+.dyn-box-wrap.locked {
+  border-color: #f59e0b;
+  background: #1a1408;
+}
+.dyn-lbl {
+  font-family: monospace;
+  font-size: 10px;
+  color: #94a3b8;
+}
+.dyn-input {
+  width: 46px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-family: monospace !important;
+  font-size: 11px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+}
+.dyn-unit {
+  font-size: 9.5px;
+  color: #64748b;
+}
+
+/* Docked AutoCAD Command Line + Habit Coach */
+.acad-cmd-dock {
+  background: #14181f;
+  border: 1px solid #262e3a;
+  border-radius: 6px;
+  padding: 5px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.cmd-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cmd-history {
+  flex: 1;
+  max-height: 36px;
+  overflow-y: auto;
+  font-family: Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+.cmd-log-line.cmd {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.cmd-log-line.warn {
+  color: #f5b95d;
+}
+.cmd-log-line.sys {
+  color: #64748b;
+}
+.acad-coach-tip {
+  font-size: 10.5px;
+  color: #fde68a;
+  background: #1f190b;
+  border: 1px solid #594414;
+  border-radius: 4px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.cmd-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid #222934;
+  padding-top: 4px;
+  position: relative;
+}
+.cmd-prompt-lbl {
+  font-family: Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  white-space: nowrap;
+}
+.cmd-input {
+  flex: 1 !important;
+  background: #0d1117 !important;
+  border: 1px solid #2a3342 !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  margin-top: 0 !important;
+  font-family: Consolas, monospace !important;
+  font-size: 11.5px !important;
+  color: #ffffff !important;
+}
+.cmd-suggest-pop {
+  position: absolute;
+  bottom: 34px;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  background: #11161d;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  padding: 4px;
+  z-index: 35;
+  min-width: 240px;
+}
+.cmd-sug-item {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: #e2e8f0;
+  text-align: left;
+}
+.cmd-sug-item:hover {
+  background: #1e293b;
+}
+.cmd-sug-item span {
+  color: #64748b;
+}
+
+/* Bottom Workspace Model / Layout1 Tabs & F3-F12 Status Bar */
+.acad-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: #0f1318;
+  border: 1px solid #262e3a;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.space-tabs,
+.aid-toggles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.space-tab {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: #181e26;
+  border: 1px solid #2a3342;
+  color: #94a3b8;
+}
+.space-tab.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 700;
+}
+.status-coords {
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+.aid-btn {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #181e26;
+  border: 1px solid #2a3342;
+  color: #94a3b8;
+}
+.aid-btn.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Layout1 A4/A3 Paper Space View */
+.acad-layout-view {
+  border: 1px solid #262e3a;
+  border-radius: 8px;
+  background: #0e1218;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.layout-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.layout-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.layout-actions select {
+  width: auto !important;
+  margin-top: 0 !important;
+  padding: 4px 24px 4px 8px !important;
+  font-size: 11px !important;
+}
+.layout-preview-host {
+  background: #1b222c;
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  justify-content: center;
+  max-height: 520px;
+  overflow: auto;
+}
+.layout-preview-host svg {
+  width: min(100%, 760px);
+  height: auto;
+  border-radius: 2px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* AutoCAD Habit Coach Step Pill & Pure AutoCAD Learning Mode */
+.step-autocad-cmd {
+  margin: 6px 0 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: #111822;
+  border: 1px solid #26384f;
+  color: #7dd3fc;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.pure-autocad-mode #stepHintDetails,
+.pure-autocad-mode #stepAutoCadHint,
+.pure-autocad-mode #btnToggleGhost {
+  display: none !important;
+}

@@ -863,11 +863,29 @@ export function createPractice3D(host) {
             onHP ? hpStrokesGroup : vpStrokesGroup
           );
         }
-      } else if (el.type === "polygon" && el.points) {
-        const isHP = el.cy < 0;
+      } else if ((el.type === "polygon" || el.type === "polyline") && el.points) {
+        const avgY = el.cy !== undefined ? el.cy : el.points.reduce((s, p) => s + p[1], 0) / el.points.length;
+        const isHP = avgY < 0;
         const pts = el.points.map((pt) => (isHP ? new THREE.Vector3(pt[0], 0.3, -pt[1]) : new THREE.Vector3(pt[0], pt[1], 0.3)));
-        if (pts.length > 0) pts.push(pts[0].clone());
+        if ((el.type === "polygon" || el.closed) && pts.length > 0) pts.push(pts[0].clone());
         const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const mat = makeLineMaterial(el.grade);
+        const line = new THREE.Line(geo, mat);
+        if (mat.isLineDashedMaterial) line.computeLineDistances();
+        (isHP ? hpStrokesGroup : vpStrokesGroup).add(line);
+      } else if (el.type === "arc") {
+        const isHP = el.cy < 0;
+        const arcPts = [];
+        let sweep = el.endAngle - el.startAngle;
+        if (el.worldCCW && sweep < 0) sweep += Math.PI * 2;
+        if (!el.worldCCW && sweep > 0) sweep -= Math.PI * 2;
+        for (let i = 0; i <= 32; i++) {
+          const a = el.startAngle + (sweep * i) / 32;
+          const px = el.cx + el.radius * Math.cos(a);
+          const py = el.cy + el.radius * Math.sin(a);
+          arcPts.push(isHP ? new THREE.Vector3(px, 0.3, -py) : new THREE.Vector3(px, py, 0.3));
+        }
+        const geo = new THREE.BufferGeometry().setFromPoints(arcPts);
         const mat = makeLineMaterial(el.grade);
         const line = new THREE.Line(geo, mat);
         if (mat.isLineDashedMaterial) line.computeLineDistances();

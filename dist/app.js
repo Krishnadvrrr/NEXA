@@ -5,6 +5,8 @@ import { QUESTIONS, TOPICS } from "./js/data/questions.js";
 import { validateStep } from "./js/stepValidator.js";
 import { PracticeCanvas } from "./js/practiceCanvas.js";
 import { createPractice3D } from "./js/practice3d.js";
+import { initAutocadWorkspaceUI } from "./js/autocadRibbon.js";
+import { formatStepAutoCadCommand } from "./js/commandParser.js";
 import {
   SOLID_CATALOG,
   parseFacultyQuestionText,
@@ -521,16 +523,19 @@ function initPracticeStudio() {
     $("stepLineTypeBadge").textContent = `Pencil: ${step.lineType}`;
     $("stepTitle").textContent = step.title;
     $("stepInstruction").textContent = step.instruction;
+    if ($("stepAutoCadHint")) {
+      $("stepAutoCadHint").textContent = `💻 AutoCAD: ${formatStepAutoCadCommand(step, currentQuestion)}`;
+    }
     $("stepHint").textContent = step.hint;
 
     $("btnPrevStep").disabled = currentStepIndex === 0;
     $("btnNextStep").textContent =
       currentStepIndex === steps.length - 1 ? "Problem Complete ✓" : "Next Step →";
 
-    // Auto-select required pencil grade
+    // Auto-select required AutoCAD layer & pencil grade
     if (step.lineType) {
-      $("pencilGradeSelect").value = step.lineType;
-      practiceCanvas.pencilGrade = step.lineType;
+      if ($("pencilGradeSelect")) $("pencilGradeSelect").value = step.lineType;
+      practiceCanvas.setPencilGrade(step.lineType);
     }
 
     // Auto-prefill Polygon generator settings when step provides suggestedPolygon
@@ -614,22 +619,6 @@ function initPracticeStudio() {
     }
   };
 
-  // 9. CAD Toolbar Tools
-  document.querySelectorAll(".cad-tool-btn").forEach((btn) => {
-    btn.onclick = () => {
-      document
-        .querySelectorAll(".cad-tool-btn")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      const tool = btn.dataset.tool;
-      practiceCanvas.tool = tool;
-
-      if (tool === "polygon") {
-        $("polygonDialog").showModal();
-      }
-    };
-  });
-
   // Polygon Generator Dialog
   $("closePolygonDialog").onclick = () => $("polygonDialog").close();
   $("polygonForm").onsubmit = (e) => {
@@ -640,30 +629,23 @@ function initPracticeStudio() {
       angle: Number($("polyAngle").value),
     };
     $("polygonDialog").close();
+    practiceCanvas.activateTool("polygon");
     $("notice").textContent = "Click on the drafting sheet to place the polygon.";
   };
 
-  // Pencil Grade Select
-  $("pencilGradeSelect").onchange = (e) => {
-    practiceCanvas.pencilGrade = e.target.value;
-  };
+  if ($("pencilGradeSelect")) {
+    $("pencilGradeSelect").onchange = (e) => {
+      practiceCanvas.setPencilGrade(e.target.value);
+    };
+  }
 
-  // Ortho & Angle Snapping
-  $("btnToggleOrtho").onclick = () => {
-    practiceCanvas.orthoLock = !practiceCanvas.orthoLock;
-    $("btnToggleOrtho").classList.toggle("active", practiceCanvas.orthoLock);
-    $("btnToggleOrtho").textContent = practiceCanvas.orthoLock
-      ? "Ortho: ON"
-      : "Ortho: OFF";
-  };
+  if ($("btnToggleOrtho")) {
+    $("btnToggleOrtho").onclick = () => practiceCanvas.toggleAid("ortho");
+  }
 
-  $("btnToggleAngleSnap").onclick = () => {
-    practiceCanvas.angleSnap = !practiceCanvas.angleSnap;
-    $("btnToggleAngleSnap").classList.toggle("active", practiceCanvas.angleSnap);
-    $("btnToggleAngleSnap").textContent = practiceCanvas.angleSnap
-      ? "Snap: 15°"
-      : "Snap: OFF";
-  };
+  if ($("btnToggleAngleSnap")) {
+    $("btnToggleAngleSnap").onclick = () => practiceCanvas.toggleAid("polar");
+  }
 
   // Explicit Angle & Length Precision Locks
   const angleInput = $("angleLockInput");
@@ -730,9 +712,9 @@ function initPracticeStudio() {
   }
 
   // Undo / Redo / Reset View
-  $("canvasUndo").onclick = () => practiceCanvas.undo();
-  $("canvasRedo").onclick = () => practiceCanvas.redo();
-  $("btnResetView").onclick = () => practiceCanvas.resetView();
+  if ($("canvasUndo")) $("canvasUndo").onclick = () => practiceCanvas.undo();
+  if ($("canvasRedo")) $("canvasRedo").onclick = () => practiceCanvas.redo();
+  if ($("btnResetView")) $("btnResetView").onclick = () => practiceCanvas.resetView();
 
   // 10. 3D Solid Model Inspector Modal
   $("btnView3D").onclick = async () => {
@@ -929,9 +911,31 @@ function initPracticeStudio() {
     console.warn("Live 3D Step Visualizer initialization failed", err);
   }
 
+  // Initialize AutoCAD Ribbon, Command Line, Layer Dropdown, Status Bar, Model/Layout & Habit Coach
+  const acadUI = initAutocadWorkspaceUI({
+    canvasEngine: practiceCanvas,
+    getQuestionContext: () => ({
+      title: currentQuestion?.title || "Engineering Graphics — Model Sheet",
+      student: $("studentName")?.value || "",
+    }),
+    onLearningModeChanged: (mode) => {
+      if (mode === "pure") {
+        practiceCanvas.showGhostGuide = false;
+        if ($("btnToggleGhost")) {
+          $("btnToggleGhost").classList.remove("active");
+          $("btnToggleGhost").textContent = "👻 Ghost Guide: OFF";
+        }
+        practiceCanvas.render();
+      } else {
+        updateStepUI();
+      }
+    },
+  });
+
   // Real-time mirroring of student's 2D canvas strokes & live cursor/drag preview in 3D
   practiceCanvas.onElementsChanged = (elements) => {
     livePractice3D?.updateStrokes(elements);
+    acadUI.refreshLayoutIfActive();
   };
   practiceCanvas.onPreviewChanged = (payload) => {
     livePractice3D?.updateCursorAndPreview(payload);

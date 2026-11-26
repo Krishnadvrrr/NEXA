@@ -57,6 +57,36 @@ export function practiceDrawing(elements) {
     } else if (el.type === "polygon") {
       const pts = el.points.map((p) => fv(p[0], p[1]).join(",")).join(" ");
       body += `<polygon points="${pts}" class="outline" fill="none" />`;
+    } else if (el.type === "polyline" && Array.isArray(el.points) && el.points.length >= 2) {
+      const cls =
+        el.grade === "HB"
+          ? "outline"
+          : el.grade === "Hidden"
+            ? "hidden"
+            : el.grade === "Axis"
+              ? "axis"
+              : "construction";
+      const pts = el.points.map((p) => fv(p[0], p[1]).join(",")).join(" ");
+      body += el.closed
+        ? `<polygon points="${pts}" class="${cls}" fill="none" />`
+        : `<polyline points="${pts}" class="${cls}" fill="none" />`;
+    } else if (el.type === "arc") {
+      const cls =
+        el.grade === "HB"
+          ? "outline"
+          : el.grade === "Hidden"
+            ? "hidden"
+            : "construction";
+      let d = "";
+      for (let i = 0; i <= 32; i++) {
+        let sweep = el.endAngle - el.startAngle;
+        if (el.worldCCW && sweep < 0) sweep += Math.PI * 2;
+        if (!el.worldCCW && sweep > 0) sweep -= Math.PI * 2;
+        const a = el.startAngle + (sweep * i) / 32;
+        const p = fv(el.cx + el.radius * Math.cos(a), el.cy + el.radius * Math.sin(a));
+        d += (i === 0 ? "M" : " L") + p[0].toFixed(2) + "," + p[1].toFixed(2);
+      }
+      body += `<path d="${d}" class="${cls}" fill="none" />`;
     } else if (el.type === "text") {
       const p = fv(el.x, el.y);
       body += `<text x="${p[0] + 4}" y="${p[1] - 4}" class="label" font-style="italic">${escapeXML(el.text)}</text>`;

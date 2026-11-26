@@ -15,12 +15,39 @@ export function reconstructFrom2DStrokes(elements = []) {
     return { hasBase: false, hasSolid: false };
   }
 
+  const expanded = [];
+  for (const e of elements) {
+    if (e.type === "polyline" && Array.isArray(e.points) && e.points.length >= 2) {
+      const count = e.closed ? e.points.length : e.points.length - 1;
+      for (let i = 0; i < count; i++) {
+        const a = e.points[i];
+        const b = e.points[(i + 1) % e.points.length];
+        expanded.push({ type: "line", x1: a[0], y1: a[1], x2: b[0], y2: b[1], grade: e.grade || "HB" });
+      }
+      if (e.closed && e.points.length >= 3) {
+        const xs = e.points.map((p) => p[0]);
+        const ys = e.points.map((p) => p[1]);
+        expanded.push({
+          type: "polygon",
+          sides: e.points.length,
+          cx: (Math.min(...xs) + Math.max(...xs)) / 2,
+          cy: (Math.min(...ys) + Math.max(...ys)) / 2,
+          edgeLength: Math.hypot(e.points[1][0] - e.points[0][0], e.points[1][1] - e.points[0][1]),
+          points: e.points,
+          grade: e.grade || "HB"
+        });
+      }
+    } else {
+      expanded.push(e);
+    }
+  }
+
   // 1. Identify base footprint in HP (Y < 0)
   let base = null;
 
-  const hpCircles = elements.filter((e) => e.type === "circle" && e.cy < -1);
-  const hpPolys = elements.filter((e) => e.type === "polygon" && e.cy < -1 && Array.isArray(e.points) && e.points.length >= 3);
-  const hpLines = elements.filter(
+  const hpCircles = expanded.filter((e) => e.type === "circle" && e.cy < -1);
+  const hpPolys = expanded.filter((e) => e.type === "polygon" && e.cy < -1 && Array.isArray(e.points) && e.points.length >= 3);
+  const hpLines = expanded.filter(
     (e) =>
       e.type === "line" &&
       e.grade !== "2H" &&
@@ -101,7 +128,7 @@ export function reconstructFrom2DStrokes(elements = []) {
 
   // 2. Find matching Front View strokes above XY overlapping this base's X-range
   const tol = 10;
-  const vpLines = elements.filter(
+  const vpLines = expanded.filter(
     (e) =>
       e.type === "line" &&
       e.grade !== "2H" &&
@@ -137,7 +164,7 @@ export function reconstructFrom2DStrokes(elements = []) {
   const isPyramid = topSpan < baseSpan * 0.35;
 
   // Detect optional Cutting Plane overlapping FV
-  const cutLines = elements.filter(
+  const cutLines = expanded.filter(
     (e) => e.type === "line" && e.grade === "Cutting Plane" && Math.max(e.y1, e.y2) > 1
   );
   let cutPlane = null;

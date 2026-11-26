@@ -8,7 +8,19 @@ import {
   buildQuestionComprehension
 } from "../dist/js/customQuestionEngine.js";
 import { reconstructFrom2DStrokes } from "../dist/js/reconstruct3d.js";
-import { computePolarConstraint, parseDynamicEntry } from "../dist/js/practiceCanvas.js";
+import {
+  computePolarConstraint,
+  parseDynamicEntry,
+  trimLineAtPoint,
+  extendLineToBoundary,
+  offsetEntity,
+  circumcircle3Pt,
+  mirrorEntity
+} from "../dist/js/practiceCanvas.js";
+import { resolveCommandAlias, parseCoordinateInput, suggestCommands, formatStepAutoCadCommand } from "../dist/js/commandParser.js";
+import { selectEntitiesInBox } from "../dist/js/selectionBox.js";
+import { LayerManager } from "../dist/js/layerManager.js";
+import { OsnapEngine } from "../dist/js/osnapEngine.js";
 
 test("Anna University Question Bank contains at least 9 problems across 3 syllabus units", () => {
   assert.ok(QUESTIONS.length >= 9, `Expected at least 9 questions, found ${QUESTIONS.length}`);
@@ -243,4 +255,79 @@ test("computePolarConstraint & parseDynamicEntry handle 45-degree lock, edge-rel
   assert.deepEqual(parseDynamicEntry("@30<-45"), { length: 30, angle: -45 });
   assert.deepEqual(parseDynamicEntry("<40"), { length: null, angle: 40 });
   assert.deepEqual(parseDynamicEntry("25"), { length: 25, angle: null });
+});
+
+test("AutoCAD command parser, layers, Window/Crossing selection, OSNAP, and Modify geometry kernels", () => {
+  // 1. All command aliases resolve accurately
+  for (const alias of ["L", "PL", "C", "A", "REC", "POL", "XL", "M", "CO", "RO", "MI", "TR", "EX", "O", "E", "DLI", "DAL", "DAN", "T", "Z", "U"]) {
+    const cmd = resolveCommandAlias(alias);
+    assert.ok(cmd && cmd.alias === alias, `Alias ${alias} failed to resolve`);
+  }
+  assert.ok(suggestCommands("DI").some((c) => c.alias === "DLI"));
+
+  // 2. Relative Cartesian (@30,-30) and Polar (@50<45) coordinate solver
+  const recRel = parseCoordinateInput("@30,-30", { x: 10, y: 20 });
+  assert.deepEqual({ x: recRel.x, y: recRel.y }, { x: 40, y: -10 });
+  const polarPt = parseCoordinateInput("@50<45", { x: 0, y: 0 });
+  assert.ok(Math.abs(polarPt.x - 50 * Math.SQRT1_2) < 1e-6);
+
+  // 3. Layer manager preset EG layers & visibility/lock state
+  const lm = new LayerManager();
+  assert.equal(lm.getAll().length, 7);
+  assert.equal(lm.getLayer("XY_Reference").color, "#00e5ff");
+  lm.setActiveByGrade("Hidden");
+  assert.equal(lm.getActiveLayer().id, "Hidden_Edges");
+  lm.toggleLock("Hidden_Edges");
+  assert.equal(lm.isElementLocked({ grade: "Hidden" }), true);
+
+  // 4. Window (L->R) vs Crossing (R->L) selection
+  const els = [
+    { id: "inside", type: "line", x1: 10, y1: 10, x2: 20, y2: 20, grade: "HB" },
+    { id: "crossing", type: "line", x1: 15, y1: 15, x2: 60, y2: 15, grade: "HB" }
+  ];
+  const winSel = selectEntitiesInBox(els, { x: 5, y: 5 }, { x: 30, y: 30 });
+  assert.equal(winSel.mode, "window");
+  assert.deepEqual(winSel.ids, ["inside"]);
+
+  const crossSel = selectEntitiesInBox(els, { x: 30, y: 30 }, { x: 5, y: 5 });
+  assert.equal(crossSel.mode, "crossing");
+  assert.deepEqual(crossSel.ids, ["inside", "crossing"]);
+
+  // 5. OSNAP Intersection & Perpendicular
+  const osnap = new OsnapEngine();
+  const hitInt = osnap.findSnap(
+    0, 0,
+    [
+      { id: "h", type: "line", x1: -10, y1: 0, x2: 10, y2: 0, grade: "HB" },
+      { id: "v", type: "line", x1: 0, y1: -10, x2: 0, y2: 10, grade: "HB" }
+    ],
+    (wx, wy) => ({ x: wx * 4, y: -wy * 4 }),
+    (sx, sy) => ({ x: sx / 4, y: -sy / 4 })
+  );
+  assert.equal(hitInt?.type, "intersection");
+  assert.ok(Math.abs(hitInt.worldX) < 1e-6 && Math.abs(hitInt.worldY) < 1e-6);
+
+  // 6. Trim, Extend, Offset, Arc, Mirror
+  const lA = { id: "a", type: "line", x1: 0, y1: 0, x2: 40, y2: 0, grade: "HB" };
+  const lB = { id: "b", type: "line", x1: 20, y1: -10, x2: 20, y2: 10, grade: "HB" };
+  const trimmed = trimLineAtPoint(lA, { x: 32, y: 0 }, [lA, lB]);
+  assert.equal(trimmed.kept.length, 1);
+  assert.ok(Math.abs(trimmed.kept[0].x2 - 20) < 1e-6);
+
+  const lShort = { id: "s", type: "line", x1: 0, y1: 0, x2: 10, y2: 0, grade: "HB" };
+  const extended = extendLineToBoundary(lShort, { x: 9, y: 0 }, [lShort, lB]);
+  assert.ok(extended && Math.abs(extended.to.x - 20) < 1e-6);
+
+  const off = offsetEntity(lA, 15, { x: 20, y: 5 });
+  assert.ok(off && Math.abs(off.y1 - 15) < 1e-6);
+
+  const arc = circumcircle3Pt({ x: 10, y: 0 }, { x: 0, y: 10 }, { x: -10, y: 0 });
+  assert.ok(arc && Math.abs(arc.radius - 10) < 1e-6);
+
+  const mir = mirrorEntity(lA, { x: 0, y: 10 }, { x: 10, y: 10 });
+  assert.ok(Math.abs(mir.y1 - 20) < 1e-6 && Math.abs(mir.y2 - 20) < 1e-6);
+
+  // 7. Habit Coach translates step titles into crisp AutoCAD guidance
+  const hint = formatStepAutoCadCommand(QUESTIONS[0].steps[1], QUESTIONS[0]);
+  assert.ok(hint.includes("REC") || hint.includes("POL"));
 });
