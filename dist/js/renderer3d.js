@@ -31,7 +31,7 @@ import {
  */
 export function createRenderer(host, opts = {}) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x030508);
+  scene.background = new THREE.Color(0x000000);
 
   const { renderer, disposeEnv } = createStudioRenderer(host, scene);
   const camera = new THREE.OrthographicCamera(-150, 150, 150, -150, 0.1, 4000);

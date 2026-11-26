@@ -8,7 +8,7 @@ export const EG_LAYERS = [
   {
     id: "XY_Reference",
     name: "XY_Reference",
-    color: "#00e5ff",
+    color: "#f5b95d",
     linetype: "Continuous",
     lineweight: 0.25,
     grade: "Axis",
@@ -28,7 +28,7 @@ export const EG_LAYERS = [
   {
     id: "Projectors_Const",
     name: "Projectors_Const",
-    color: "#7f8c9a",
+    color: "#666666",
     linetype: "Continuous",
     lineweight: 0.15,
     grade: "2H",
@@ -58,7 +58,7 @@ export const EG_LAYERS = [
   {
     id: "Dimensions_Text",
     name: "Dimensions_Text",
-    color: "#4ade80",
+    color: "#e5e5e5",
     linetype: "Continuous",
     lineweight: 0.18,
     grade: "Dimension",

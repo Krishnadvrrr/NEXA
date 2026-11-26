@@ -111,12 +111,12 @@ function buildFrostedCuttingPlane(cutBasis, sizeSpan = 80) {
 
   const geo = new THREE.PlaneGeometry(w, d);
   const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x38bdf8,
+    color: 0xffffff,
     metalness: 0.05,
     roughness: 0.18,
     clearcoat: 0.7,
     transparent: true,
-    opacity: 0.16,
+    opacity: 0.09,
     side: THREE.DoubleSide,
     depthWrite: false
   });
@@ -261,7 +261,7 @@ export function buildSectionAssembly(polyData, cutBasis, styleId = "shaded", opt
           new THREE.Vector3(c[0] + nx * explodeDist, c[1] + ny * explodeDist, c[2] + nz * explodeDist)
         ]),
         new THREE.LineDashedMaterial({
-          color: 0x38bdf8,
+          color: 0xcccccc,
           dashSize: 3,
           gapSize: 2,
           transparent: true,

@@ -130,7 +130,7 @@ export function createGoochMaterial(opacity = 0.96) {
       uWarmColor: { value: new THREE.Color(0xd99b43) },
       uCoolMix: { value: 0.35 },
       uWarmMix: { value: 0.48 },
-      uRimColor: { value: new THREE.Color(0x7dd3fc) },
+      uRimColor: { value: new THREE.Color(0xd4d4d4) },
       uLightDir: { value: new THREE.Vector3(0.45, 0.78, 0.55).normalize() },
       uViewDir: { value: new THREE.Vector3(0.55, 0.52, 0.65).normalize() },
       uOpacity: { value: opacity }
@@ -600,7 +600,7 @@ export function buildInternalGuidesGroup(polyData, options = {}) {
       const gGeo = new THREE.BufferGeometry();
       gGeo.setAttribute("position", new THREE.Float32BufferAttribute(genPts, 3));
       const gMat = new THREE.LineDashedMaterial({
-        color: 0x38bdf8,
+        color: 0x888888,
         dashSize: 2.5,
         gapSize: 2.2,
         transparent: true,
@@ -625,7 +625,7 @@ export function buildInternalGuidesGroup(polyData, options = {}) {
     const sGeo = new THREE.BufferGeometry();
     sGeo.setAttribute("position", new THREE.Float32BufferAttribute(spokePts, 3));
     const sMat = new THREE.LineDashedMaterial({
-      color: 0x67b7d1,
+      color: 0x888888,
       dashSize: 2.2,
       gapSize: 2.2,
       transparent: true,

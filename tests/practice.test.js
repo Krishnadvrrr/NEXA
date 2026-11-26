@@ -274,7 +274,7 @@ test("AutoCAD command parser, layers, Window/Crossing selection, OSNAP, and Modi
   // 3. Layer manager preset EG layers & visibility/lock state
   const lm = new LayerManager();
   assert.equal(lm.getAll().length, 7);
-  assert.equal(lm.getLayer("XY_Reference").color, "#00e5ff");
+  assert.equal(lm.getLayer("XY_Reference").color, "#f5b95d");
   lm.setActiveByGrade("Hidden");
   assert.equal(lm.getActiveLayer().id, "Hidden_Edges");
   lm.toggleLock("Hidden_Edges");

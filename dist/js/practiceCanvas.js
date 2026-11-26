@@ -6,7 +6,7 @@ import { parseCoordinateInput } from "./commandParser.js";
 
 /**
  * Scaled Drafting Canvas Engine — AutoCAD Model Space Edition
- * - Model Space slate-charcoal canvas (#212830), bottom-left 2D UCS Icon, full-screen crosshair + pickbox
+ * - Model Space pure black canvas (#000000), bottom-left 2D UCS Icon, full-screen crosshair + pickbox
  * - Pure Polar Constraint Solver (Ortho F8, Polar F10, ∠/L Locks, Edge-Relative snapping)
  * - AutoCAD Osnap Engine (Endpoint, Midpoint, Center, Intersection, Perpendicular, Quadrant, XY)
  * - Window (L->R blue solid) & Crossing (R->L green dashed) Selection
@@ -2111,7 +2111,7 @@ export class PracticeCanvas {
 
     if (this.zoom >= 0.7) {
       ctx.beginPath();
-      ctx.strokeStyle = "#29323d";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
       ctx.lineWidth = 0.6;
       const minorStartX = this.originX % minorStepPx;
       const minorStartY = this.originY % minorStepPx;
@@ -2127,7 +2127,7 @@ export class PracticeCanvas {
     }
 
     ctx.beginPath();
-    ctx.strokeStyle = "#35414f";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
     ctx.lineWidth = 1;
     for (let x = startX; x < w; x += majorStepPx) {
       ctx.moveTo(x, 0);
@@ -2139,7 +2139,7 @@ export class PracticeCanvas {
     }
     ctx.stroke();
 
-    ctx.fillStyle = "#6e7d8f";
+    ctx.fillStyle = "#777777";
     ctx.font = "9px monospace";
     for (let x = startX; x < w; x += majorStepPx * 2) {
       const mmX = Math.round((x - this.originX) / scale);
@@ -2158,7 +2158,7 @@ export class PracticeCanvas {
     if (xyY < -100 || xyY > h + 100) return;
 
     ctx.save();
-    ctx.strokeStyle = xyLayer.color || "#00e5ff";
+    ctx.strokeStyle = xyLayer.color || "#f5b95d";
     ctx.lineWidth = 1.6;
     ctx.setLineDash([]);
     ctx.beginPath();
@@ -2166,12 +2166,12 @@ export class PracticeCanvas {
     ctx.lineTo(w, xyY);
     ctx.stroke();
 
-    ctx.fillStyle = xyLayer.color || "#00e5ff";
+    ctx.fillStyle = xyLayer.color || "#f5b95d";
     ctx.font = "bold 12px 'Segoe UI', monospace";
     ctx.fillText("X", 16, xyY - 6);
     ctx.fillText("Y", w - 26, xyY - 6);
     ctx.font = "10px 'Segoe UI', sans-serif";
-    ctx.fillStyle = "rgba(0, 229, 255, 0.72)";
+    ctx.fillStyle = "rgba(245, 185, 93, 0.72)";
     ctx.fillText("VP (Front View) ↑", 36, xyY - 6);
     ctx.fillText("HP (Top View) ↓", 36, xyY + 13);
     ctx.restore();
@@ -2185,7 +2185,7 @@ export class PracticeCanvas {
     ctx.setLineDash([]);
 
     // Origin pick square
-    ctx.strokeStyle = "#cbd5e1";
+    ctx.strokeStyle = "#aaaaaa";
     ctx.strokeRect(ux - 4, uy - 4, 8, 8);
 
     // X axis (Red)
@@ -2237,7 +2237,7 @@ export class PracticeCanvas {
 
   applyElementLayerStyle(ctx, el, selected = false) {
     const layer = this.layerManager.resolveElementLayer(el);
-    ctx.strokeStyle = selected ? "#60a5fa" : layer.color;
+    ctx.strokeStyle = selected ? "#ffffff" : layer.color;
 
     const showLwt = this.layerManager.showLineweight;
     const pxWidth = showLwt ? Math.max(1.0, (layer.lineweight || 0.25) * 4.8) : 1.3;
@@ -2287,7 +2287,7 @@ export class PracticeCanvas {
     } else if (el.type === "text") {
       const p = this.worldToScreen(el.x, el.y);
       const layer = this.layerManager.resolveElementLayer(el);
-      ctx.fillStyle = selected ? "#60a5fa" : layer.color;
+      ctx.fillStyle = selected ? "#ffffff" : layer.color;
       ctx.font = "italic 14px 'Segoe UI', serif";
       ctx.fillText(el.text, p.x + 4, p.y - 4);
       ctx.beginPath();
@@ -2301,7 +2301,7 @@ export class PracticeCanvas {
 
   drawSelectionGrips(ctx, screenPts) {
     ctx.save();
-    ctx.fillStyle = "#3b82f6";
+    ctx.fillStyle = "#f5b95d";
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
@@ -2313,7 +2313,7 @@ export class PracticeCanvas {
   }
 
   drawDimension(ctx, dim, selected = false) {
-    const dimColor = selected ? "#60a5fa" : this.layerManager.getLayer("Dimensions_Text").color || "#4ade80";
+    const dimColor = selected ? "#ffffff" : this.layerManager.getLayer("Dimensions_Text").color || "#e5e5e5";
     ctx.strokeStyle = dimColor;
     ctx.fillStyle = dimColor;
     ctx.lineWidth = 1.1;

@@ -1336,8 +1336,8 @@ dialog .primary {
   font-size: 11px !important;
   font-weight: 600;
   color: #ffffff !important;
-  background-color: rgba(8, 10, 14, 0.92) !important;
-  border: 1px solid #2d3748 !important;
+  background-color: rgba(0, 0, 0, 0.92) !important;
+  border: 1px solid #262626 !important;
   border-radius: 5px !important;
   height: 26px;
 }
@@ -1346,9 +1346,9 @@ dialog .primary {
   font-size: 10.5px;
   font-weight: 600;
   border-radius: 4px;
-  background: rgba(8, 10, 14, 0.92);
-  border: 1px solid #2d3748;
-  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid #262626;
+  color: #cccccc;
   white-space: nowrap;
   height: 26px;
   display: inline-flex;
@@ -1356,9 +1356,9 @@ dialog .primary {
   gap: 3px;
 }
 .vc-mini-btn:hover {
-  background: #1a202c;
+  background: #1a1a1a;
   color: #ffffff;
-  border-color: #64748b;
+  border-color: #555555;
 }
 .vc-mini-btn.active {
   background: #ffffff;
@@ -1380,28 +1380,28 @@ dialog .primary {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(6, 8, 12, 0.92);
-  border: 1px solid #2d3748;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid #262626;
   border-radius: 5px;
   padding: 4px 8px;
 }
 .sec-explode-slider {
   width: 68px !important;
   height: 4px;
-  accent-color: #38bdf8;
+  accent-color: #ffffff;
   margin: 0 !important;
   padding: 0 !important;
-  background: #1f2937 !important;
+  background: #1a1a1a !important;
 }
 .sec-explode-val {
   font-family: monospace;
   font-size: 10.5px;
-  color: #38bdf8;
+  color: #ffffff;
   min-width: 36px;
   text-align: right;
 }
 .sec-metrics-line {
-  background: rgba(6, 8, 12, 0.9);
+  background: rgba(0, 0, 0, 0.9);
   border: 1px solid #3f321a;
   border-radius: 4px;
   padding: 3px 8px;
@@ -1438,7 +1438,7 @@ dialog .primary {
   position: absolute;
   inset: 3px;
   border-radius: 50%;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
   pointer-events: none;
 }
 .vc-cube {
@@ -1459,9 +1459,9 @@ dialog .primary {
   font-size: 7.5px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  color: #e2e8f0;
-  background: rgba(15, 20, 28, 0.92);
-  border: 1px solid #475569;
+  color: #e5e5e5;
+  background: rgba(8, 8, 8, 0.92);
+  border: 1px solid #333333;
   border-radius: 2px;
   backface-visibility: visible;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
@@ -1576,8 +1576,8 @@ dialog .primary {
   display: flex;
   align-items: stretch;
   gap: 8px;
-  background: #14181f;
-  border: 1px solid #262e3a;
+  background: #080808;
+  border: 1px solid #1f1f1f;
   border-radius: 6px;
   padding: 6px 10px 4px;
   flex-wrap: wrap;
@@ -1588,7 +1588,7 @@ dialog .primary {
   flex-direction: column;
   justify-content: space-between;
   padding-right: 8px;
-  border-right: 1px solid #262e3a;
+  border-right: 1px solid #1f1f1f;
   gap: 4px;
 }
 .ribbon-panel:last-child {
@@ -1605,13 +1605,13 @@ dialog .primary {
   font-size: 9px;
   letter-spacing: 0.9px;
   text-transform: uppercase;
-  color: #6b7b8e;
+  color: #777777;
   text-align: center;
 }
 .ribbon-tool-btn {
-  background: #1c222b;
-  border: 1px solid #2b3442;
-  color: #cfd8e3;
+  background: #0f0f0f;
+  border: 1px solid #242424;
+  color: #cccccc;
   font-size: 10.5px;
   padding: 4px 7px;
   border-radius: 4px;
@@ -1621,9 +1621,9 @@ dialog .primary {
   white-space: nowrap;
 }
 .ribbon-tool-btn:hover {
-  background: #28313e;
+  background: #1c1c1c;
   color: #ffffff;
-  border-color: #475569;
+  border-color: #444444;
 }
 .ribbon-tool-btn.active {
   background: #ffffff;
@@ -1642,9 +1642,9 @@ dialog .primary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #0f1318;
-  border: 1px solid #2d3748;
-  color: #e2e8f0;
+  background: #080808;
+  border: 1px solid #262626;
+  color: #e5e5e5;
   font-size: 10.5px;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1652,7 +1652,7 @@ dialog .primary {
   white-space: nowrap;
 }
 .acad-layer-btn:hover {
-  border-color: #64748b;
+  border-color: #555555;
 }
 .layer-color-dot {
   width: 9px;
@@ -1667,8 +1667,8 @@ dialog .primary {
   top: 30px;
   left: 0;
   width: 280px;
-  background: #11161d;
-  border: 1px solid #334155;
+  background: #0a0a0a;
+  border: 1px solid #262626;
   border-radius: 6px;
   padding: 6px;
   z-index: 40;
@@ -1682,13 +1682,13 @@ dialog .primary {
   border-radius: 4px;
 }
 .layer-row.active {
-  background: #1e293b;
+  background: #1c1c1c;
 }
 .layer-vis-btn,
 .layer-lock-btn {
   background: transparent;
-  border: 1px solid #2a3441;
-  color: #94a3b8;
+  border: 1px solid #242424;
+  color: #999999;
   padding: 2px 4px;
   font-size: 10.5px;
   border-radius: 3px;
@@ -1709,7 +1709,7 @@ dialog .primary {
   border: none;
   padding: 2px 4px;
   text-align: left;
-  color: #e2e8f0;
+  color: #e5e5e5;
 }
 .layer-select-btn:hover {
   background: rgba(255, 255, 255, 0.05);
@@ -1720,14 +1720,14 @@ dialog .primary {
 }
 .layer-meta {
   font-size: 9.5px;
-  color: #8899aa;
+  color: #888888;
 }
 .coach-mode-btn {
   font-size: 10.5px;
   padding: 4px 8px;
-  background: #1c222b;
-  border: 1px solid #2b3442;
-  color: #94a3b8;
+  background: #0f0f0f;
+  border: 1px solid #242424;
+  color: #999999;
   border-radius: 4px;
 }
 .coach-mode-btn.active {
@@ -1737,13 +1737,13 @@ dialog .primary {
   font-weight: 700;
 }
 
-/* Deep Slate-Charcoal Model Space Canvas (#212830) */
+/* Pure Black Model Space Canvas (#000000) */
 .acad-model-space {
-  background: #212830 !important;
+  background: #000000 !important;
   cursor: none;
 }
 .acad-model-space canvas {
-  background: #212830;
+  background: #000000;
 }
 .practice-canvas-host,
 .practice-3d-column {
@@ -1763,8 +1763,8 @@ dialog .primary {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: rgba(15, 20, 26, 0.94);
-  border: 1px solid #475569;
+  background: rgba(8, 8, 8, 0.96);
+  border: 1px solid #333333;
   border-radius: 3px;
   padding: 2px 5px;
   height: 23px;
@@ -1776,7 +1776,7 @@ dialog .primary {
 .dyn-lbl {
   font-family: monospace;
   font-size: 10px;
-  color: #94a3b8;
+  color: #999999;
 }
 .dyn-input {
   width: 46px !important;
@@ -1791,13 +1791,13 @@ dialog .primary {
 }
 .dyn-unit {
   font-size: 9.5px;
-  color: #64748b;
+  color: #777777;
 }
 
 /* Docked AutoCAD Command Line + Habit Coach */
 .acad-cmd-dock {
-  background: #14181f;
-  border: 1px solid #262e3a;
+  background: #080808;
+  border: 1px solid #1f1f1f;
   border-radius: 6px;
   padding: 5px 10px;
   display: flex;
@@ -1818,17 +1818,17 @@ dialog .primary {
   font-family: Consolas, monospace;
   font-size: 10.5px;
   line-height: 1.45;
-  color: #94a3b8;
+  color: #999999;
 }
 .cmd-log-line.cmd {
-  color: #e2e8f0;
+  color: #e5e5e5;
   font-weight: 600;
 }
 .cmd-log-line.warn {
   color: #f5b95d;
 }
 .cmd-log-line.sys {
-  color: #64748b;
+  color: #777777;
 }
 .acad-coach-tip {
   font-size: 10.5px;
@@ -1843,7 +1843,7 @@ dialog .primary {
   display: flex;
   align-items: center;
   gap: 8px;
-  border-top: 1px solid #222934;
+  border-top: 1px solid #1f1f1f;
   padding-top: 4px;
   position: relative;
 }
@@ -1851,13 +1851,13 @@ dialog .primary {
   font-family: Consolas, monospace;
   font-size: 11.5px;
   font-weight: 700;
-  color: #38bdf8;
+  color: #ffffff;
   white-space: nowrap;
 }
 .cmd-input {
   flex: 1 !important;
-  background: #0d1117 !important;
-  border: 1px solid #2a3342 !important;
+  background: #000000 !important;
+  border: 1px solid #262626 !important;
   border-radius: 4px !important;
   padding: 4px 8px !important;
   margin-top: 0 !important;
@@ -1871,8 +1871,8 @@ dialog .primary {
   left: 0;
   display: flex;
   flex-direction: column;
-  background: #11161d;
-  border: 1px solid #334155;
+  background: #0a0a0a;
+  border: 1px solid #262626;
   border-radius: 5px;
   padding: 4px;
   z-index: 35;
@@ -1885,14 +1885,14 @@ dialog .primary {
   padding: 4px 8px;
   font-family: Consolas, monospace;
   font-size: 11px;
-  color: #e2e8f0;
+  color: #e5e5e5;
   text-align: left;
 }
 .cmd-sug-item:hover {
-  background: #1e293b;
+  background: #1c1c1c;
 }
 .cmd-sug-item span {
-  color: #64748b;
+  color: #777777;
 }
 
 /* Bottom Workspace Model / Layout1 Tabs & F3-F12 Status Bar */
@@ -1902,8 +1902,8 @@ dialog .primary {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  background: #0f1318;
-  border: 1px solid #262e3a;
+  background: #080808;
+  border: 1px solid #1f1f1f;
   border-radius: 6px;
   padding: 4px 8px;
 }
@@ -1918,9 +1918,9 @@ dialog .primary {
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 4px;
-  background: #181e26;
-  border: 1px solid #2a3342;
-  color: #94a3b8;
+  background: #111111;
+  border: 1px solid #242424;
+  color: #999999;
 }
 .space-tab.active {
   background: #ffffff;
@@ -1931,29 +1931,29 @@ dialog .primary {
 .status-coords {
   font-family: Consolas, monospace;
   font-size: 11px;
-  color: #cbd5e1;
+  color: #cccccc;
 }
 .aid-btn {
   font-size: 10px;
   font-family: monospace;
   padding: 3px 7px;
   border-radius: 4px;
-  background: #181e26;
-  border: 1px solid #2a3342;
-  color: #94a3b8;
+  background: #111111;
+  border: 1px solid #242424;
+  color: #999999;
 }
 .aid-btn.active {
-  background: #0284c7;
-  border-color: #38bdf8;
-  color: #ffffff;
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
   font-weight: 700;
 }
 
 /* Layout1 A4/A3 Paper Space View */
 .acad-layout-view {
-  border: 1px solid #262e3a;
+  border: 1px solid #1f1f1f;
   border-radius: 8px;
-  background: #0e1218;
+  background: #050505;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -1966,7 +1966,7 @@ dialog .primary {
   flex-wrap: wrap;
   gap: 10px;
   font-size: 12px;
-  color: #cbd5e1;
+  color: #cccccc;
 }
 .layout-actions {
   display: flex;
@@ -1980,7 +1980,7 @@ dialog .primary {
   font-size: 11px !important;
 }
 .layout-preview-host {
-  background: #1b222c;
+  background: #0d0d0d;
   border-radius: 6px;
   padding: 14px;
   display: flex;
@@ -2000,9 +2000,9 @@ dialog .primary {
   margin: 6px 0 8px;
   padding: 6px 8px;
   border-radius: 4px;
-  background: #111822;
-  border: 1px solid #26384f;
-  color: #7dd3fc;
+  background: #0a0a0a;
+  border: 1px solid #262626;
+  color: #e5e5e5;
   font-family: Consolas, monospace;
   font-size: 11px;
   line-height: 1.45;

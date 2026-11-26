@@ -164,12 +164,12 @@ export function drawSelectionBox(ctx, startScreen, endScreen) {
 
   ctx.save();
   if (isWindow) {
-    ctx.fillStyle = "rgba(59, 130, 246, 0.16)";
-    ctx.strokeStyle = "#60a5fa";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
+    ctx.strokeStyle = "#ffffff";
     ctx.setLineDash([]);
   } else {
-    ctx.fillStyle = "rgba(34, 197, 94, 0.16)";
-    ctx.strokeStyle = "#4ade80";
+    ctx.fillStyle = "rgba(245, 185, 93, 0.12)";
+    ctx.strokeStyle = "#f5b95d";
     ctx.setLineDash([6, 4]);
   }
   ctx.lineWidth = 1.4;

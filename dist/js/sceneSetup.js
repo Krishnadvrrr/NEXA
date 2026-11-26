@@ -111,7 +111,7 @@ export function createStudioRenderer(host, scene) {
  * Configures 3-point studio lighting + AutoCAD camera-tracking fill light.
  */
 export function createStudioLighting(scene, shadowRadius = 190) {
-  const hemi = new THREE.HemisphereLight(0xeef6ff, 0x10141a, 1.05);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x111111, 1.15);
   scene.add(hemi);
 
   const keyLight = new THREE.DirectionalLight(0xfff5e8, 2.2);
@@ -128,7 +128,7 @@ export function createStudioLighting(scene, shadowRadius = 190) {
   keyLight.shadow.bias = -0.0005;
   scene.add(keyLight);
 
-  const rimLight = new THREE.DirectionalLight(0x6bd4ff, 1.35);
+  const rimLight = new THREE.DirectionalLight(0xffffff, 1.05);
   rimLight.position.set(-150, 120, -140);
   scene.add(rimLight);
 
@@ -263,7 +263,7 @@ export function buildGlassReferencePlanesIntoGroups({
   const midX = (minX + maxX) / 2;
 
   const vpGlassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x0f1924,
+    color: 0x080808,
     metalness: 0.1,
     roughness: 0.25,
     clearcoat: 0.5,
@@ -273,7 +273,7 @@ export function buildGlassReferencePlanesIntoGroups({
     depthWrite: false
   });
   const hpGlassMat = vpGlassMat.clone();
-  hpGlassMat.color.setHex(0x0b121a);
+  hpGlassMat.color.setHex(0x060606);
   hpGlassMat.opacity = 0.26;
 
   // Vertical Plane (VP Wall at Z = 0)
@@ -284,7 +284,7 @@ export function buildGlassReferencePlanesIntoGroups({
 
   const vpBorder = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.PlaneGeometry(width, heightSpan)),
-    new THREE.LineBasicMaterial({ color: 0x30475e, transparent: true, opacity: 0.72 })
+    new THREE.LineBasicMaterial({ color: 0x2a2a2a, transparent: true, opacity: 0.72 })
   );
   vpBorder.position.copy(vpMesh.position);
   vpGroup.add(vpBorder);
@@ -301,10 +301,10 @@ export function buildGlassReferencePlanesIntoGroups({
   vpGroup.add(
     new THREE.LineSegments(
       vpGridGeo,
-      new THREE.LineBasicMaterial({ color: 0x263849, transparent: true, opacity: 0.45 })
+      new THREE.LineBasicMaterial({ color: 0x1c1c1c, transparent: true, opacity: 0.48 })
     )
   );
-  createSpriteLabel("VP (Front View)", new THREE.Vector3(minX + 36, heightSpan - 12, 1), "#7c98b3", [46, 9], vpGroup);
+  createSpriteLabel("VP (Front View)", new THREE.Vector3(minX + 36, heightSpan - 12, 1), "#777777", [46, 9], vpGroup);
 
   // Horizontal Plane (HP Floor)
   const hpMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, depthSpan), hpGlassMat);
@@ -315,7 +315,7 @@ export function buildGlassReferencePlanesIntoGroups({
 
   const hpBorder = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.PlaneGeometry(width, depthSpan)),
-    new THREE.LineBasicMaterial({ color: 0x30475e, transparent: true, opacity: 0.72 })
+    new THREE.LineBasicMaterial({ color: 0x2a2a2a, transparent: true, opacity: 0.72 })
   );
   hpBorder.rotation.x = -Math.PI / 2;
   hpBorder.position.copy(hpMesh.position);
@@ -333,10 +333,10 @@ export function buildGlassReferencePlanesIntoGroups({
   hpGroup.add(
     new THREE.LineSegments(
       hpGridGeo,
-      new THREE.LineBasicMaterial({ color: 0x263849, transparent: true, opacity: 0.45 })
+      new THREE.LineBasicMaterial({ color: 0x1c1c1c, transparent: true, opacity: 0.48 })
     )
   );
-  createSpriteLabel("HP (Horizontal Plane)", new THREE.Vector3(minX + 42, 1, depthSpan - 12), "#7c98b3", [52, 9], hpGroup);
+  createSpriteLabel("HP (Horizontal Plane)", new THREE.Vector3(minX + 42, 1, depthSpan - 12), "#777777", [52, 9], hpGroup);
 
   // Glowing XY Reference Hinge Line
   const xyLine = new THREE.Line(

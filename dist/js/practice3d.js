@@ -43,7 +43,7 @@ const degToRad = (d) => (d * Math.PI) / 180;
 export function createPractice3D(host) {
   const viewportEl = host.parentElement || host;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x030508);
+  scene.background = new THREE.Color(0x000000);
 
   const { renderer, disposeEnv } = createStudioRenderer(host, scene);
 
@@ -161,7 +161,7 @@ export function createPractice3D(host) {
     if (grade === "2H") return 0x6b7280;
     if (grade === "Axis") return 0xf5b95d;
     if (grade === "Hidden") return 0x9ca3af;
-    if (grade === "Cutting Plane") return 0x38bdf8;
+    if (grade === "Cutting Plane") return 0xf5b95d;
     return 0xffffff;
   };
 
@@ -346,7 +346,7 @@ export function createPractice3D(host) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
     const mat = new THREE.LineDashedMaterial({
-      color: 0x5c7288,
+      color: 0x555555,
       dashSize: 3,
       gapSize: 2.5,
       transparent: true,
@@ -628,7 +628,7 @@ export function createPractice3D(host) {
         }
         const vGeo = new THREE.BufferGeometry();
         vGeo.setAttribute("position", new THREE.Float32BufferAttribute(vpPts, 3));
-        const ls = new THREE.LineSegments(vGeo, new THREE.LineDashedMaterial({ color: 0x5c7288, dashSize: 3, gapSize: 2.5 }));
+        const ls = new THREE.LineSegments(vGeo, new THREE.LineDashedMaterial({ color: 0x555555, dashSize: 3, gapSize: 2.5 }));
         ls.computeLineDistances();
         raysGroup.add(ls);
         updateSpatialDescription(
