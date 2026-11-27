@@ -54,6 +54,15 @@ export function practiceDrawing(elements) {
             ? "hidden"
             : "construction";
       body += `<circle cx="${c[0]}" cy="${c[1]}" r="${r}" class="${cls}" fill="none" />`;
+    } else if (el.type === "ellipse") {
+      const c = fv(el.cx, el.cy);
+      const cls =
+        el.grade === "HB"
+          ? "outline"
+          : el.grade === "Hidden"
+            ? "hidden"
+            : "construction";
+      body += `<ellipse cx="${c[0]}" cy="${c[1]}" rx="${(el.rx * scale).toFixed(2)}" ry="${(el.ry * scale).toFixed(2)}" transform="rotate(${-(el.rotationDeg || 0)} ${c[0].toFixed(2)} ${c[1].toFixed(2)})" class="${cls}" fill="none" />`;
     } else if (el.type === "polygon") {
       const pts = el.points.map((p) => fv(p[0], p[1]).join(",")).join(" ");
       body += `<polygon points="${pts}" class="outline" fill="none" />`;

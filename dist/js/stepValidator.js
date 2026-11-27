@@ -123,6 +123,30 @@ function evaluateRule(rule, elements) {
         }
       }
 
+      if (rule.expectedLength) {
+        const vertOrMatching = rule.vertical
+          ? lines.filter((l) => Math.abs(l.x2 - l.x1) < TOLERANCE.distance).map((l) => Math.abs(l.y2 - l.y1))
+          : lines.map((l) => Math.hypot(l.x2 - l.x1, l.y2 - l.y1));
+        const hasExpected = vertOrMatching.some((len) => Math.abs(len - rule.expectedLength) <= TOLERANCE.length);
+        if (!hasExpected && rule.trueLengthTrap) {
+          const hitTrap = vertOrMatching.some((len) => Math.abs(len - rule.trueLengthTrap) <= TOLERANCE.length);
+          if (hitTrap) {
+            return {
+              valid: false,
+              message: `You drew True Length (${rule.trueLengthTrap} mm). For Isometric Projection, apply the 0.8165 scale (${rule.expectedLength.toFixed(1)} mm).`,
+              suggestion: `Multiply ${rule.trueLengthTrap} by 0.8165 = ${rule.expectedLength.toFixed(1)} mm.`
+            };
+          }
+        }
+        if (!hasExpected) {
+          return {
+            valid: false,
+            message: `Expected isometric line length ≈ ${rule.expectedLength.toFixed(1)} mm.`,
+            suggestion: "Check F8 Iso-Ortho alignment and length entry."
+          };
+        }
+      }
+
       if (rule.vertical) {
         const hasVert = lines.some((l) => Math.abs(l.x2 - l.x1) < TOLERANCE.distance && Math.abs(l.y2 - l.y1) > 10);
         if (!hasVert) {
@@ -241,13 +265,14 @@ function evaluateRule(rule, elements) {
       }
 
       if (rule.edgeLength) {
+        const tol = rule.toleranceOverride || TOLERANCE.length;
         // Check polygon edge lengths
         let foundEdge = false;
         let actualEdge = 0;
 
         if (polys.length > 0) {
           for (const p of polys) {
-            if (Math.abs(p.edgeLength - rule.edgeLength) <= TOLERANCE.length) {
+            if (Math.abs(p.edgeLength - rule.edgeLength) <= tol) {
               foundEdge = true;
               break;
             }
@@ -259,7 +284,7 @@ function evaluateRule(rule, elements) {
           const matchingLine = lines.find((l) => {
             const len = Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
             actualEdge = len;
-            return Math.abs(len - rule.edgeLength) <= TOLERANCE.length;
+            return Math.abs(len - rule.edgeLength) <= tol;
           });
           if (matchingLine) foundEdge = true;
         }
@@ -267,7 +292,7 @@ function evaluateRule(rule, elements) {
         if (!foundEdge) {
           return {
             valid: false,
-            message: `Base edge is ${actualEdge.toFixed(1)} mm; expected ${rule.edgeLength} mm (±${TOLERANCE.length} mm).`,
+            message: `Base edge is ${actualEdge.toFixed(1)} mm; expected ${rule.edgeLength} mm (±${tol} mm).`,
             suggestion: `Set base edge to ${rule.edgeLength} mm using the Polygon tool or check cursor length HUD.`
           };
         }
@@ -324,6 +349,167 @@ function evaluateRule(rule, elements) {
         }
       }
 
+      return { valid: true };
+    }
+
+    case "isoAxes": {
+      const lines = elements.filter((e) => e.type === "line" && Math.hypot(e.x2 - e.x1, e.y2 - e.y1) > 4);
+      const targets = rule.angles || [30, 150];
+      const matchedAxes = new Set();
+      for (const l of lines) {
+        let deg = ((Math.atan2(l.y2 - l.y1, l.x2 - l.x1) * 180) / Math.PI + 360) % 180;
+        for (const t of targets) {
+          const normT = ((t % 180) + 180) % 180;
+          if (Math.abs(deg - normT) <= TOLERANCE.angle) {
+            matchedAxes.add(normT);
+          }
+        }
+      }
+      if (matchedAxes.size < (rule.minCount || targets.length)) {
+        return {
+          valid: false,
+          message: `Draw isometric axis lines aligned at ${targets.join("° & ")}° (detected ${matchedAxes.size}/${targets.length} axis directions).`,
+          suggestion: "Enable ISODRAFT + ORTHO (F8) and press F5 to switch Isoplane Top (30°/150°)."
+        };
+      }
+      return { valid: true };
+    }
+
+    case "isoScaleTrap": {
+      const lines = elements.filter((e) => e.type === "line");
+      const lengths = lines.map((l) => Math.hypot(l.x2 - l.x1, l.y2 - l.y1)).filter((v) => v > 3);
+      if (lengths.length === 0) {
+        return {
+          valid: false,
+          message: "No isometric edges drawn yet.",
+          suggestion: `Draw edge length scaled by 0.8165 (${rule.isoLength.toFixed(1)} mm).`
+        };
+      }
+      const hasIso = lengths.some((len) => Math.abs(len - rule.isoLength) <= TOLERANCE.length);
+      const hasTrueTrap = !hasIso && lengths.some((len) => Math.abs(len - rule.trueLength) <= TOLERANCE.length);
+      if (hasTrueTrap) {
+        return {
+          valid: false,
+          message: `You drew True Length (${rule.trueLength} mm). For Isometric Projection, apply the 0.8165 scale (${rule.isoLength.toFixed(1)} mm).`,
+          suggestion: "Use the Iso ×0.8165 quick converter in the toolbar or multiply true dimension by 0.8165."
+        };
+      }
+      if (!hasIso) {
+        return {
+          valid: false,
+          message: `Expected isometric scaled edge ≈ ${rule.isoLength.toFixed(1)} mm (${rule.trueLength} × 0.8165).`,
+          suggestion: "Enter the exact 0.8165 isometric length using Dynamic Input or Length Lock."
+        };
+      }
+      return { valid: true };
+    }
+
+    case "isometricBox": {
+      const lines = elements.filter((e) => e.type === "line");
+      const scale = rule.scaleMode === "view" ? 1.0 : Math.sqrt(2 / 3);
+      const expW = (rule.expectedWidth || 50) * scale;
+      const expH = (rule.expectedHeight || 60) * scale;
+      const hasIso30 = lines.some((l) => {
+        const deg = ((Math.atan2(l.y2 - l.y1, l.x2 - l.x1) * 180) / Math.PI + 360) % 180;
+        const len = Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+        return Math.abs(deg - 30) <= TOLERANCE.angle && Math.abs(len - expW) <= TOLERANCE.length + 1.5;
+      });
+      const hasVert = lines.some((l) => {
+        const len = Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+        return Math.abs(l.x2 - l.x1) < TOLERANCE.distance && Math.abs(len - expH) <= TOLERANCE.length + 1.5;
+      });
+      if (!hasIso30 || !hasVert) {
+        return {
+          valid: false,
+          message: `Complete the ${expW.toFixed(1)} mm (30°) × ${expH.toFixed(1)} mm (90° vertical) enclosing box.`,
+          suggestion: "Cycle F5 between Top, Left, and Right isoplanes with F8 Ortho ON."
+        };
+      }
+      return { valid: true };
+    }
+
+    case "isocircle": {
+      const ellipses = elements.filter((e) => e.type === "ellipse");
+      const fourCenterArcs = elements.filter((e) => e.type === "arc" && (e.isFourCenterArc || e.isoRadius));
+      const allArcs = elements.filter((e) => e.type === "arc");
+      const isoR = Number(rule.expectedRadius) || 16.33;
+      const trapR = rule.trueRadiusTrap ? Number(rule.trueRadiusTrap) : null;
+
+      // Collect normalized iso radii drawn either via EL->I ellipse OR 4-center arcs
+      const drawnIsoRadii = [];
+      for (const el of ellipses) {
+        drawnIsoRadii.push(el.isoRadius || el.rx / Math.sqrt(3 / 2));
+      }
+      if (fourCenterArcs.length >= 2) {
+        for (const a of fourCenterArcs) {
+          drawnIsoRadii.push(a.isoRadius || (a.arcTag?.startsWith("large") ? a.radius / Math.sqrt(3) : a.radius * Math.sqrt(3)));
+        }
+      } else if (allArcs.length >= 4) {
+        for (const a of allArcs) {
+          if (Math.abs(a.radius - Math.sqrt(3) * isoR) <= TOLERANCE.length * 1.5) drawnIsoRadii.push(a.radius / Math.sqrt(3));
+        }
+      }
+
+      if (drawnIsoRadii.length === 0) {
+        return {
+          valid: false,
+          message: "No Isometric Ellipse (Isocircle or 4-Center arcs) detected.",
+          suggestion: `Use EL -> I (Isocircle) or the 4-Center tool in Isoplane ${rule.isoplane || "top"} with R_iso = ${isoR.toFixed(1)} mm.`
+        };
+      }
+
+      const matched = drawnIsoRadii.some((r) => Math.abs(r - isoR) <= TOLERANCE.length);
+      if (!matched && trapR) {
+        const hitTrap = drawnIsoRadii.some((r) => Math.abs(r - trapR) <= TOLERANCE.length);
+        if (hitTrap) {
+          return {
+            valid: false,
+            message: `You drew True Radius (${trapR} mm). For Isometric Projection, apply the 0.8165 scale (${isoR.toFixed(1)} mm).`,
+            suggestion: `Redraw with Isometric Radius ${isoR.toFixed(1)} mm (D_iso = ${(isoR * 2).toFixed(1)} mm).`
+          };
+        }
+      }
+      if (!matched) {
+        return {
+          valid: false,
+          message: `Isometric ellipse radius does not match expected R_iso = ${isoR.toFixed(1)} mm.`,
+          suggestion: `Check Isoplane (F5 = ${rule.isoplane || "top"}) and enter radius ${isoR.toFixed(1)} mm.`
+        };
+      }
+      if ((rule.minCount || 1) > 1 && ellipses.length + Math.floor(fourCenterArcs.length / 4) < rule.minCount) {
+        return {
+          valid: false,
+          message: `Expected ${rule.minCount} isometric ellipses (bottom and top faces).`,
+          suggestion: "Copy or construct the upper isometric ellipse at the elevated center."
+        };
+      }
+      return { valid: true };
+    }
+
+    case "sphereTrueRadius": {
+      const circles = elements.filter((e) => e.type === "circle");
+      if (circles.length === 0) {
+        return {
+          valid: false,
+          message: "Sphere projection must be drawn as a true Circular outline using Circle (C).",
+          suggestion: `Draw a circle centered on the elevated point with TRUE radius ${rule.expectedTrueRadius} mm.`
+        };
+      }
+      const matchTrue = circles.some((c) => Math.abs(c.radius - rule.expectedTrueRadius) <= TOLERANCE.length);
+      if (!matchTrue && rule.wrongIsoRadius && circles.some((c) => Math.abs(c.radius - rule.wrongIsoRadius) <= TOLERANCE.length)) {
+        return {
+          valid: false,
+          message: `You scaled the Sphere radius to 0.8165 (${rule.wrongIsoRadius.toFixed(1)} mm). Keep the Sphere circle at TRUE RADIUS (${rule.expectedTrueRadius} mm) — only scale center-to-center distance by 0.8165!`,
+          suggestion: `Redraw Circle (C) with radius = ${rule.expectedTrueRadius} mm.`
+        };
+      }
+      if (!matchTrue) {
+        return {
+          valid: false,
+          message: `Sphere radius is ${circles[0].radius.toFixed(1)} mm; expected TRUE radius ${rule.expectedTrueRadius} mm.`,
+          suggestion: "Enter the true sphere radius directly."
+        };
+      }
       return { valid: true };
     }
 

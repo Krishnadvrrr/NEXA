@@ -149,6 +149,18 @@ export class OsnapEngine {
             1.2
           );
         }
+      } else if (el.type === "ellipse") {
+        if (this.modes.center) {
+          consider(el.cx, el.cy, "center", "Center", 0.8);
+        }
+        if (this.modes.quadrant) {
+          const rot = ((el.rotationDeg || 0) * Math.PI) / 180;
+          const cosR = Math.cos(rot);
+          const sinR = Math.sin(rot);
+          for (const [qx, qy] of [[el.rx, 0], [-el.rx, 0], [0, el.ry], [0, -el.ry]]) {
+            consider(el.cx + qx * cosR - qy * sinR, el.cy + qx * sinR + qy * cosR, "quadrant", "Quadrant", 0.35);
+          }
+        }
       } else if (el.type === "polygon" && el.cx !== undefined && el.cy !== undefined && this.modes.center) {
         consider(el.cx, el.cy, "center", "Center", 0.8);
       }

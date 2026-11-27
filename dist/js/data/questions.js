@@ -7,6 +7,8 @@
  *   Y < 0 : Top View (HP / Plan)
  */
 
+import { ISOMETRIC_QUESTIONS, ISO_UNIT_ID } from "./isometricQuestions.js";
+
 export const QUESTIONS = [
   // =========================================================================
   // UNIT 1: PROJECTION OF SOLIDS
@@ -824,11 +826,13 @@ export const QUESTIONS = [
         validation: { requires: [{ type: "composite", inRegion: "rightSide" }] }
       }
     ]
-  }
+  },
+  ...ISOMETRIC_QUESTIONS
 ];
 
 export const TOPICS = [
   { id: "all", name: "All Units" },
+  { id: ISO_UNIT_ID, name: "★ Unit V: Isometric Projection (Priority Mastery)" },
   { id: "Projection of Solids", name: "Unit 1: Projection of Solids" },
   { id: "Section of Solids", name: "Unit 2: Section of Solids" },
   { id: "Development of Surfaces", name: "Unit 3: Development of Surfaces" },

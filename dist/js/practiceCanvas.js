@@ -3,6 +3,14 @@ import { OsnapEngine, segmentIntersection, lineCircleIntersections } from "./osn
 import { selectEntitiesInBox, hitTestEntity, drawSelectionBox, distToSegWorld } from "./selectionBox.js";
 import { DynamicInputHUD } from "./dynamicInput.js";
 import { parseCoordinateInput } from "./commandParser.js";
+import {
+  cycleIsoplane,
+  getIsoplaneSpec,
+  getIsoOrthoAngles,
+  getAllIsoAxisAngles,
+  computeIsocircleGeometry
+} from "./isoDraftEngine.js";
+import { buildFourCenterGeometry } from "./fourCenterTool.js";
 
 /**
  * Scaled Drafting Canvas Engine — AutoCAD Model Space Edition
@@ -35,8 +43,8 @@ export function computePolarConstraint(fromWorld, toWorld, opts = {}) {
   const rawDeg = rawLen >= 0.05 ? normalizeDeg((Math.atan2(dy, dx) * 180) / Math.PI) : 0;
 
   if (opts.orthoLock) {
-    const orthoCandidates = [0, 90, 180, 270];
-    let best = 0;
+    const orthoCandidates = opts.isoDraft ? getIsoOrthoAngles(opts.isoplane || "top") : [0, 90, 180, 270];
+    let best = orthoCandidates[0];
     let bestD = Infinity;
     for (const c of orthoCandidates) {
       const d = angDiffDeg(rawDeg, c);
@@ -48,7 +56,11 @@ export function computePolarConstraint(fromWorld, toWorld, opts = {}) {
     const rad = (best * Math.PI) / 180;
     return {
       point: { x: fromWorld.x + targetLen * Math.cos(rad), y: fromWorld.y + targetLen * Math.sin(rad) },
-      snappedInfo: { deg: best, label: `ORTHO ${best}°`, mode: "ortho" }
+      snappedInfo: {
+        deg: best,
+        label: opts.isoDraft ? `ISO ORTHO ${best}°` : `ORTHO ${best}°`,
+        mode: "ortho"
+      }
     };
   }
 
@@ -109,7 +121,7 @@ export function computePolarConstraint(fromWorld, toWorld, opts = {}) {
       if (d <= bestD + 0.3 && d < snapWindow) {
         bestD = d;
         best = target;
-        bestLabel = `${target}° SNAP`;
+        bestLabel = opts.isoDraft && getAllIsoAxisAngles().includes(target) ? `ISO ${target}°` : `${target}° SNAP`;
       }
     }
 
@@ -196,6 +208,11 @@ export function transformEntity(el, fnPoint, rotDeg = 0) {
     const c = fnPoint({ x: clone.cx, y: clone.cy });
     clone.cx = c.x;
     clone.cy = c.y;
+  } else if (clone.type === "ellipse") {
+    const c = fnPoint({ x: clone.cx, y: clone.cy });
+    clone.cx = c.x;
+    clone.cy = c.y;
+    clone.rotationDeg = (clone.rotationDeg || 0) + rotDeg;
   } else if (clone.type === "arc") {
     const c = fnPoint({ x: clone.cx, y: clone.cy });
     clone.cx = c.x;
@@ -233,7 +250,10 @@ export function mirrorEntity(el, m1, m2) {
     return { x: 2 * fx - p.x, y: 2 * fy - p.y };
   };
   const mirrored = transformEntity(el, reflectPt, 0);
-  if (mirrored.type === "arc") {
+  if (mirrored.type === "ellipse") {
+    const lineAngDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    mirrored.rotationDeg = 2 * lineAngDeg - (el.rotationDeg || 0);
+  } else if (mirrored.type === "arc") {
     const lineAng = Math.atan2(dy, dx);
     const ns = 2 * lineAng - el.startAngle;
     const ne = 2 * lineAng - el.endAngle;
@@ -471,6 +491,8 @@ export class PracticeCanvas {
     this.gridSnapEnabled = false; // F9
     this.orthoLock = false;       // F8
     this.angleSnap = true;        // F10
+    this.isoDraftEnabled = false; // ISODRAFT
+    this.isoplane = "top";        // F5 Isoplane: top | left | right
     this.lockedAngleDeg = null;
     this.angleRelativeTo = "xy";
     this.lockedLengthMm = null;
@@ -491,6 +513,7 @@ export class PracticeCanvas {
     this.onLayerChanged = null;
     this.onToolChanged = null;
     this.onAidStateChanged = null;
+    this.onIsoStateChanged = null;
 
     // Interactive Command State Machine
     this.isDrawing = false;
@@ -597,9 +620,35 @@ export class PracticeCanvas {
       if (!this.dynHud.enabled) this.dynHud.hide();
     } else if (kind === "lwt") {
       this.layerManager.showLineweight = !this.layerManager.showLineweight;
+    } else if (kind === "isodraft") {
+      this.setIsoDraft(!this.isoDraftEnabled);
+      return;
+    } else if (kind === "isoplane") {
+      this.cycleIsoplaneMode();
+      return;
     }
     this.onAidStateChanged?.();
     this.render();
+  }
+
+  setIsoDraft(enabled, nextIsoplane = null) {
+    this.isoDraftEnabled = Boolean(enabled);
+    if (nextIsoplane) this.isoplane = nextIsoplane;
+    this.onAidStateChanged?.();
+    this.onIsoStateChanged?.({ enabled: this.isoDraftEnabled, isoplane: this.isoplane });
+    this.render();
+  }
+
+  cycleIsoplaneMode() {
+    this.isoplane = cycleIsoplane(this.isoplane);
+    if (!this.isoDraftEnabled) this.isoDraftEnabled = true;
+    const spec = getIsoplaneSpec(this.isoplane);
+    this.onCommandLog?.(`<Isoplane ${spec.label}> (${spec.description})`, "sys");
+    this.onAidStateChanged?.();
+    this.onIsoStateChanged?.({ enabled: this.isoDraftEnabled, isoplane: this.isoplane });
+    this.updateCommandPrompt();
+    this.render();
+    return this.isoplane;
   }
 
   hasActiveCommand() {
@@ -619,6 +668,20 @@ export class PracticeCanvas {
       prompt = this.polyPoints.length > 0 ? "PLINE Specify next point or [Enter to close/finish]:" : "PLINE Specify start point:";
     } else if (t === "circle") {
       prompt = this.isDrawing && this.dragStart ? "CIRCLE Specify radius of circle:" : "CIRCLE Specify center point:";
+    } else if (t === "isocircle") {
+      const planeLabel = getIsoplaneSpec(this.isoplane).label;
+      if (this.cmdStage === "ellipseOption") {
+        prompt = `ELLIPSE Specify center or [Isocircle] (F5=${planeLabel}):`;
+      } else {
+        prompt = this.isDrawing && this.dragStart
+          ? `ISOCIRCLE (${planeLabel}) Specify iso radius (press F5 to flip plane):`
+          : `ISOCIRCLE (${planeLabel}) Specify center of isocircle:`;
+      }
+    } else if (t === "fourcenter") {
+      const planeLabel = getIsoplaneSpec(this.isoplane).label;
+      prompt = this.isDrawing && this.dragStart
+        ? `FOURCENTER (${planeLabel}) Specify iso radius of rhombus/ellipse:`
+        : `FOURCENTER (${planeLabel}) Specify center of Four-Center rhombus:`;
     } else if (t === "arc") {
       prompt =
         this.arcPoints.length === 0
@@ -664,8 +727,26 @@ export class PracticeCanvas {
   }
 
   activateTool(toolId) {
+    if (toolId === "isodraft") {
+      this.setIsoDraft(!this.isoDraftEnabled);
+      this.onCommandLog?.(`<ISODRAFT ${this.isoDraftEnabled ? "ON" : "OFF"}>`, "sys");
+      return;
+    }
+    if (toolId === "isoplane") {
+      this.cycleIsoplaneMode();
+      return;
+    }
+
     this.resetTransientCommand();
     this.tool = toolId;
+
+    if (toolId === "isocircle" || toolId === "fourcenter") {
+      if (!this.isoDraftEnabled) {
+        this.isoDraftEnabled = true;
+        this.onAidStateChanged?.();
+        this.onIsoStateChanged?.({ enabled: true, isoplane: this.isoplane });
+      }
+    }
 
     if (toolId === "projector") {
       this.setLayer("Projectors_Const");
@@ -696,6 +777,12 @@ export class PracticeCanvas {
         this.activateTool(cmd.tool);
         return;
       }
+    }
+    if (cmd.alias === "EL") {
+      this.activateTool("isocircle");
+      this.cmdStage = "ellipseOption";
+      this.updateCommandPrompt();
+      return;
     }
     this.activateTool(cmd.tool);
   }
@@ -758,6 +845,11 @@ export class PracticeCanvas {
 
     // Confirm empty Enter/Space inside multi-step commands
     if (!val) {
+      if (this.cmdStage === "ellipseOption") {
+        this.cmdStage = null;
+        this.updateCommandPrompt();
+        return true;
+      }
       if (this.cmdStage === "selectObjects" && this.selectedIds.size > 0) {
         this.cmdStage = this.tool === "mirror" ? "mirror1" : "basePoint";
         this.updateCommandPrompt();
@@ -778,6 +870,17 @@ export class PracticeCanvas {
       this.updateCommandPrompt();
       this.render();
       return true;
+    }
+
+    // EL -> I (Isocircle option)
+    if (this.cmdStage === "ellipseOption") {
+      if (/^I(SOCIRCLE)?$/i.test(val)) {
+        this.cmdStage = null;
+        this.setIsoDraft(true);
+        this.onCommandLog?.(`ISOCIRCLE active on Isoplane ${getIsoplaneSpec(this.isoplane).label}. Specify center point:`, "sys");
+        this.updateCommandPrompt();
+        return true;
+      }
     }
 
     // Offset distance input
@@ -852,7 +955,8 @@ export class PracticeCanvas {
       return true;
     }
 
-    if (this.tool === "line" || this.tool === "circle" || this.tool === "rect" || this.tool === "projector") {
+    if (this.tool === "line" || this.tool === "circle" || this.tool === "isocircle" || this.tool === "fourcenter" || this.tool === "rect" || this.tool === "projector") {
+      this.cmdStage = null;
       this.beginStrokeAt({ x: parsed.x, y: parsed.y });
       return true;
     }
@@ -956,6 +1060,8 @@ export class PracticeCanvas {
     const res = computePolarConstraint(fromWorld, toWorld, {
       orthoLock: this.orthoLock,
       angleSnap: this.angleSnap,
+      isoDraft: this.isoDraftEnabled,
+      isoplane: this.isoplane,
       lockedAngleDeg: this.lockedAngleDeg,
       angleRelativeTo: this.angleRelativeTo,
       refEdgeAngleDeg: this.refEdgeAngleDeg,
@@ -1353,7 +1459,7 @@ export class PracticeCanvas {
       return;
     }
 
-    // Second click in click-click mode finishes segment/rect/circle/dim
+    // Second click in click-click mode finishes segment/rect/circle/isocircle/fourcenter/dim
     if (this.isDrawing && this.clickClickActive && this.dragStart) {
       if (this.tool === "rect") {
         this.commitRect(this.dragStart, worldPos);
@@ -1361,6 +1467,10 @@ export class PracticeCanvas {
         this.commitSegment(this.dragStart, worldPos, this.tool === "line");
       }
       return;
+    }
+
+    if (this.cmdStage === "ellipseOption") {
+      this.cmdStage = null;
     }
 
     // Start Draw click-click / drag
@@ -1447,11 +1557,11 @@ export class PracticeCanvas {
           primaryLabel: "∠",
           primaryUnit: "°"
         });
-      } else if (this.tool === "circle") {
+      } else if (this.tool === "circle" || this.tool === "isocircle" || this.tool === "fourcenter") {
         this.dynHud.update(pos, {
           mode: "scalar",
           primaryVal: len.toFixed(1),
-          primaryLabel: "R",
+          primaryLabel: this.tool === "circle" ? "R" : "R_iso",
           primaryUnit: "mm"
         });
       } else {
@@ -1553,7 +1663,7 @@ export class PracticeCanvas {
     const len = Math.hypot(end.x - start.x, end.y - start.y);
     const { layer, grade } = this.getActiveLayerAndGrade();
 
-    if (len >= 0.5 || this.tool === "circle") {
+    if (len >= 0.5 || this.tool === "circle" || this.tool === "isocircle" || this.tool === "fourcenter") {
       if (this.tool === "line") {
         this.elements.push({
           id: "line-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
@@ -1588,6 +1698,25 @@ export class PracticeCanvas {
           grade,
           layer
         });
+        this.saveState();
+      } else if (this.tool === "isocircle") {
+        const rIso = Math.max(1, len || 20);
+        const geo = computeIsocircleGeometry(start.x, start.y, rIso, this.isoplane);
+        this.elements.push({
+          id: "isocirc-" + Date.now(),
+          ...geo,
+          grade,
+          layer
+        });
+        this.saveState();
+      } else if (this.tool === "fourcenter") {
+        const rIso = Math.max(2, len || 20);
+        const built = buildFourCenterGeometry(start.x, start.y, rIso, this.isoplane, { layer, grade });
+        this.elements.push(...built.allElements);
+        this.onCommandLog?.(
+          `Four-Center Ellipse (${getIsoplaneSpec(this.isoplane).label}, R_iso=${rIso.toFixed(1)}mm): Rhombus + 4 arcs constructed.`,
+          "info"
+        );
         this.saveState();
       } else if (this.tool === "dimension" || this.tool === "dimlinear") {
         let p2 = { x: end.x, y: end.y };
@@ -1881,6 +2010,9 @@ export class PracticeCanvas {
       }
       if (el.type === "circle" || el.type === "arc") {
         pts.push([el.cx - el.radius, el.cy - el.radius], [el.cx + el.radius, el.cy + el.radius]);
+      } else if (el.type === "ellipse") {
+        const rm = Math.max(el.rx || 1, el.ry || 1);
+        pts.push([el.cx - rm, el.cy - rm], [el.cx + rm, el.cy + rm]);
       } else if (el.type === "text") {
         pts.push([el.x, el.y]);
       }
@@ -2023,7 +2155,11 @@ export class PracticeCanvas {
       lenText = ` L: ${len.toFixed(1)} mm`;
       angleText = ` ∠: ${deg.toFixed(1)}°`;
     }
-    const region = worldPos.y >= 0 ? "VP (Front View)" : "HP (Top View)";
+    const region = this.isoDraftEnabled
+      ? `ISOPLANE: ${getIsoplaneSpec(this.isoplane).shortLabel}`
+      : worldPos.y >= 0
+        ? "VP (Front View)"
+        : "HP (Top View)";
     this.hud.textContent = `X: ${worldPos.x.toFixed(1)} · Y: ${worldPos.y.toFixed(1)} mm [${region}]${lenText}${angleText}`;
 
     if (this.snapHud) {
@@ -2050,9 +2186,10 @@ export class PracticeCanvas {
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Millimeter Grid (F7)
+    // 1. Millimeter Rectangular OR 30°/150°/90° Isometric Diamond Grid (F7)
     if (this.gridEnabled) {
-      this.drawGrid(ctx, w, h);
+      if (this.isoDraftEnabled) this.drawIsoGrid(ctx, w, h);
+      else this.drawGrid(ctx, w, h);
     }
 
     // 2. XY Reference Axis Line
@@ -2100,6 +2237,67 @@ export class PracticeCanvas {
     if (this.mouseScreen.inside && this.tool !== "pan" && !this.isPanning) {
       this.drawCrosshair(ctx, w, h);
     }
+  }
+
+  drawIsoGrid(ctx, w, h) {
+    const scale = this.basePxPerMm * this.zoom;
+    const stepMm = this.zoom >= 0.7 ? 10 : 20;
+    const cos30 = Math.sqrt(3) / 2;
+    const sin30 = 0.5;
+    const spanPx = Math.hypot(w, h) + 200;
+
+    // Anchor isometric lattice to Origin (0,0) so grid intersects cleanly with sheet coordinates
+    const o = this.worldToScreen(0, 0);
+    const stepRight = stepMm * scale;
+    const stepVert = stepMm * scale;
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.11)";
+    ctx.lineWidth = 0.85;
+    ctx.setLineDash([]);
+
+    // Vertical 90° grid lines along iso horizontal pitch (step * cos30)
+    const dxVert = stepRight * cos30;
+    const startVX = ((o.x % dxVert) + dxVert) % dxVert;
+    ctx.beginPath();
+    for (let x = startVX; x < w; x += dxVert) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+    }
+    ctx.stroke();
+
+    // Sloping 30° (+X_iso) and 150° (-Z_iso) diamond grid lines passing through exact lattice steps
+    const numSteps = Math.ceil((w + h) / (stepVert * 0.5) / 2) + 24;
+    const slope = Math.tan(Math.PI / 6); // 1 / sqrt(3)
+    const yPeriod = stepVert;
+    const baseYOffset = ((o.y - o.x * slope) % yPeriod + yPeriod) % yPeriod;
+    const diagSpanX = w + 120;
+
+    ctx.beginPath();
+    for (let k = -numSteps; k <= numSteps; k++) {
+      const y0 = o.y + k * yPeriod;
+      // 30° upward-right lines (in screen Y-down: dy/dx = -tan30)
+      const yAt0_pos = y0 + o.x * slope;
+      const yAtW_pos = y0 - (diagSpanX - o.x) * slope;
+      ctx.moveTo(0, yAt0_pos);
+      ctx.lineTo(diagSpanX, yAtW_pos);
+
+      // 150° upward-left / 330° downward-right lines (dy/dx = +tan30)
+      const yAt0_neg = y0 - o.x * slope;
+      const yAtW_neg = y0 + (diagSpanX - o.x) * slope;
+      ctx.moveTo(0, yAt0_neg);
+      ctx.lineTo(diagSpanX, yAtW_neg);
+    }
+    ctx.stroke();
+
+    // Scale labels across top edge
+    ctx.fillStyle = "#777777";
+    ctx.font = "9px monospace";
+    for (let x = startVX; x < w; x += dxVert * 2) {
+      const mmX = Math.round((x - this.originX) / scale);
+      if (mmX !== 0) ctx.fillText(String(mmX), x + 2, 11);
+    }
+    ctx.restore();
   }
 
   drawGrid(ctx, w, h) {
@@ -2214,20 +2412,43 @@ export class PracticeCanvas {
     const mx = this.mouseScreen.x;
     const my = this.mouseScreen.y;
     ctx.save();
-    ctx.strokeStyle = "rgba(226, 232, 240, 0.45)";
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    ctx.beginPath();
-    // Full-screen crosshair with 5px gap around pickbox
-    ctx.moveTo(0, my);
-    ctx.lineTo(mx - 5, my);
-    ctx.moveTo(mx + 5, my);
-    ctx.lineTo(w, my);
-    ctx.moveTo(mx, 0);
-    ctx.lineTo(mx, my - 5);
-    ctx.moveTo(mx, my + 5);
-    ctx.lineTo(mx, h);
-    ctx.stroke();
+
+    if (this.isoDraftEnabled) {
+      const spec = getIsoplaneSpec(this.isoplane);
+      const span = Math.max(w, h) + 200;
+      spec.axesDeg.forEach((deg, idx) => {
+        const rad = (deg * Math.PI) / 180;
+        const dx = Math.cos(rad);
+        const dy = -Math.sin(rad); // screen Y-down
+        ctx.strokeStyle = spec.axisColors[idx];
+        ctx.globalAlpha = 0.65;
+        ctx.beginPath();
+        ctx.moveTo(mx - dx * span, my - dy * span);
+        ctx.lineTo(mx - dx * 6, my - dy * 6);
+        ctx.moveTo(mx + dx * 6, my + dy * 6);
+        ctx.lineTo(mx + dx * span, my + dy * span);
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+      ctx.font = "bold 9px monospace";
+      ctx.fillStyle = "#f5b95d";
+      ctx.fillText(`ISO:${spec.shortLabel}`, mx + 8, my + 14);
+    } else {
+      ctx.strokeStyle = "rgba(226, 232, 240, 0.45)";
+      ctx.beginPath();
+      // Full-screen crosshair with 5px gap around pickbox
+      ctx.moveTo(0, my);
+      ctx.lineTo(mx - 5, my);
+      ctx.moveTo(mx + 5, my);
+      ctx.lineTo(w, my);
+      ctx.moveTo(mx, 0);
+      ctx.lineTo(mx, my - 5);
+      ctx.moveTo(mx, my + 5);
+      ctx.lineTo(mx, h);
+      ctx.stroke();
+    }
 
     // Central pickbox
     ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
@@ -2266,6 +2487,14 @@ export class PracticeCanvas {
       const r = el.radius * this.basePxPerMm * this.zoom;
       ctx.beginPath();
       ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      if (selected) this.drawSelectionGrips(ctx, [c]);
+    } else if (el.type === "ellipse") {
+      const c = this.worldToScreen(el.cx, el.cy);
+      const s = this.basePxPerMm * this.zoom;
+      const rotRad = -((el.rotationDeg || 0) * Math.PI) / 180;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, el.rx * s, el.ry * s, rotRad, 0, Math.PI * 2);
       ctx.stroke();
       if (selected) this.drawSelectionGrips(ctx, [c]);
     } else if (el.type === "arc") {
@@ -2551,6 +2780,29 @@ export class PracticeCanvas {
       ctx.beginPath();
       ctx.arc(p1.x, p1.y, r, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (this.tool === "isocircle" || this.tool === "fourcenter") {
+      const rIso = Math.max(1, lenMm);
+      const s = this.basePxPerMm * this.zoom;
+      const fc = buildFourCenterGeometry(this.dragStart.x, this.dragStart.y, rIso, this.isoplane, { includeLabels: false });
+      ctx.save();
+      ctx.strokeStyle = "rgba(245, 185, 93, 0.45)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      for (const l of [...fc.rhombusLines, ...(this.tool === "fourcenter" ? fc.medianLines : [])]) {
+        const a = this.worldToScreen(l.x1, l.y1);
+        const b = this.worldToScreen(l.x2, l.y2);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const isoEl = computeIsocircleGeometry(this.dragStart.x, this.dragStart.y, rIso, this.isoplane);
+      const c = this.worldToScreen(isoEl.cx, isoEl.cy);
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, isoEl.rx * s, isoEl.ry * s, -((isoEl.rotationDeg * Math.PI) / 180), 0, Math.PI * 2);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -2588,6 +2840,13 @@ export class PracticeCanvas {
         const r = g.radius * this.basePxPerMm * this.zoom;
         ctx.beginPath();
         ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (g.type === "ellipse" && g.center) {
+        const c = this.worldToScreen(g.center[0], g.center[1]);
+        const s = this.basePxPerMm * this.zoom;
+        const rotRad = -((g.rotationDeg || 0) * Math.PI) / 180;
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, g.rx * s, g.ry * s, rotRad, 0, Math.PI * 2);
         ctx.stroke();
       } else if (g.type === "arc" && g.center && Number.isFinite(g.radius)) {
         const c = this.worldToScreen(g.center[0], g.center[1]);

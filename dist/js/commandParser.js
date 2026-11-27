@@ -27,7 +27,12 @@ export const AUTOCAD_COMMANDS = [
 
   { alias: "Z", name: "ZOOM", category: "Utility", tool: "zoom_extents", hint: "Type Z + Enter or double-click middle mouse for Zoom Extents." },
   { alias: "U", name: "UNDO", category: "Utility", tool: "undo", hint: "Type U + Enter (or Ctrl+Z) to step back." },
-  { alias: "P", name: "PAN", category: "Utility", tool: "pan", hint: "Hold middle mouse drag anytime to Pan without switching tools." }
+  { alias: "P", name: "PAN", category: "Utility", tool: "pan", hint: "Hold middle mouse drag anytime to Pan without switching tools." },
+
+  { alias: "ISODRAFT", name: "ISODRAFT", category: "Isometric", tool: "isodraft", hint: "Toggle ISODRAFT for 30°/150° grid, tilted crosshair & F5 Isoplane switching." },
+  { alias: "ISOPLANE", name: "ISOPLANE (F5)", category: "Isometric", tool: "isoplane", hint: "Press F5 or Ctrl+E anytime to cycle Isoplane Top -> Left -> Right." },
+  { alias: "EL", name: "ELLIPSE / ISOCIRCLE", category: "Isometric", tool: "isocircle", hint: "Type EL + Space (then I) to draw an AutoCAD Isocircle aligned to active F5 Isoplane." },
+  { alias: "FC", name: "FOURCENTER", category: "Isometric", tool: "fourcenter", hint: "Type FC + Space to construct an Isometric Ellipse via the Four-Center Method." }
 ];
 
 const EXTRA_ALIASES = {
@@ -63,7 +68,15 @@ const EXTRA_ALIASES = {
   ZOOM: "Z",
   ZE: "Z",
   UNDO: "U",
-  PAN: "P"
+  PAN: "P",
+  ISO: "ISODRAFT",
+  ISODRAFT: "ISODRAFT",
+  ISOPLANE: "ISOPLANE",
+  F5: "ISOPLANE",
+  ELLIPSE: "EL",
+  ISOCIRCLE: "EL",
+  FOURCENTER: "FC",
+  "4C": "FC"
 };
 
 export function resolveCommandAlias(raw = "") {
@@ -175,6 +188,7 @@ export function parseCoordinateInput(raw, anchor = { x: 0, y: 0 }, cursor = { x:
  */
 export function formatStepAutoCadCommand(step, question) {
   if (!step) return "";
+  if (step.autocadHint) return step.autocadHint;
   const title = (step.title || "").toLowerCase();
   const p = question?.parameters || {};
   const edge = p.baseEdge || p.diameter || 30;

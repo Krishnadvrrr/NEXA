@@ -168,7 +168,7 @@ export function initAutocadWorkspaceUI({
     });
   });
 
-  // Status Bar Drafting-Aid Toggles (F3, F7, F8, F9, F10, F12, LWT)
+  // Status Bar Drafting-Aid Toggles (F3, F5, F7, F8, F9, F10, F12, ISODRAFT, LWT)
   const statusToggleEls = {
     grid: document.getElementById("btnStatusGrid"),
     snap: document.getElementById("btnStatusSnap"),
@@ -176,7 +176,9 @@ export function initAutocadWorkspaceUI({
     polar: document.getElementById("btnStatusPolar"),
     osnap: document.getElementById("btnStatusOsnap"),
     dyn: document.getElementById("btnStatusDyn"),
-    lwt: document.getElementById("btnStatusLwt")
+    lwt: document.getElementById("btnStatusLwt"),
+    isodraft: document.getElementById("btnStatusIsodraft"),
+    isoplane: document.getElementById("btnStatusIsoplane")
   };
 
   function syncStatusBarUI() {
@@ -187,6 +189,12 @@ export function initAutocadWorkspaceUI({
     statusToggleEls.osnap?.classList.toggle("active", canvasEngine.osnap.enabled);
     statusToggleEls.dyn?.classList.toggle("active", canvasEngine.dynHud.enabled);
     statusToggleEls.lwt?.classList.toggle("active", canvasEngine.layerManager.showLineweight);
+    statusToggleEls.isodraft?.classList.toggle("active", canvasEngine.isoDraftEnabled);
+    if (statusToggleEls.isoplane) {
+      const planeUpper = String(canvasEngine.isoplane || "top").toUpperCase();
+      statusToggleEls.isoplane.textContent = `ISOPLANE: ${planeUpper} (F5)`;
+      statusToggleEls.isoplane.classList.toggle("active", canvasEngine.isoDraftEnabled);
+    }
 
     const orthoTop = document.getElementById("btnToggleOrtho");
     if (orthoTop) {
@@ -201,6 +209,7 @@ export function initAutocadWorkspaceUI({
   }
 
   canvasEngine.onAidStateChanged = () => syncStatusBarUI();
+  canvasEngine.onIsoStateChanged = () => syncStatusBarUI();
 
   statusToggleEls.grid?.addEventListener("click", () => {
     canvasEngine.toggleAid("grid");
@@ -230,11 +239,52 @@ export function initAutocadWorkspaceUI({
     canvasEngine.toggleAid("lwt");
     pushCommandLog(`<Lineweight ${canvasEngine.layerManager.showLineweight ? "on" : "off"}>`, "sys");
   });
+  statusToggleEls.isodraft?.addEventListener("click", () => {
+    canvasEngine.toggleAid("isodraft");
+    pushCommandLog(`<ISODRAFT ${canvasEngine.isoDraftEnabled ? "ON" : "OFF"}>`, "sys");
+  });
+  statusToggleEls.isoplane?.addEventListener("click", () => {
+    canvasEngine.cycleIsoplaneMode();
+  });
 
-  // Wire Function Keys F3, F7, F8, F9, F10, F12 cleanly inside Practice Studio
+  // Compact Isometric Scale Quick-Apply Widget (True mm × 0.8165 -> apply directly to Length Lock)
+  const isoCalcIn = document.getElementById("isoCalcTrueInput");
+  const isoCalcOut = document.getElementById("isoCalcOut");
+  const isoCalcApply = document.getElementById("btnApplyIsoScale");
+  if (isoCalcIn && isoCalcOut) {
+    const refreshCalc = () => {
+      const t = parseFloat(isoCalcIn.value);
+      if (Number.isFinite(t) && t > 0) {
+        const scaled = t * Math.sqrt(2 / 3);
+        isoCalcOut.textContent = `${scaled.toFixed(2)}mm`;
+        return scaled;
+      }
+      isoCalcOut.textContent = "—";
+      return null;
+    };
+    isoCalcIn.addEventListener("input", refreshCalc);
+    isoCalcApply?.addEventListener("click", () => {
+      const scaled = refreshCalc();
+      const lenInput = document.getElementById("lengthLockInput");
+      const lenClear = document.getElementById("btnClearLengthLock");
+      if (scaled && lenInput) {
+        const val = scaled.toFixed(2);
+        lenInput.value = val;
+        canvasEngine.lockedLengthMm = parseFloat(val);
+        lenInput.closest(".cad-lock-pill")?.classList.add("locked");
+        if (lenClear) lenClear.hidden = false;
+        pushCommandLog(`Applied 0.8165 Isometric Length Lock = ${val} mm (from ${isoCalcIn.value} mm true)`, "sys");
+      }
+    });
+  }
+
+  // Wire Function Keys F3, F5 (Isoplane), Ctrl+E, F7, F8, F9, F10, F12 cleanly inside Practice Studio
   window.addEventListener("keydown", (e) => {
     if (!document.body.classList.contains("practice-mode")) return;
-    if (e.key === "F7") {
+    if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e")) {
+      e.preventDefault();
+      canvasEngine.cycleIsoplaneMode();
+    } else if (e.key === "F7") {
       e.preventDefault();
       canvasEngine.toggleAid("grid");
     } else if (e.key === "F9") {
@@ -302,7 +352,7 @@ export function initAutocadWorkspaceUI({
       return;
     }
 
-    pushCommandLog(`Unknown command "${val}". Try L, PL, C, A, REC, POL, XL, M, CO, RO, MI, TR, EX, O, E, Z, U.`, "warn");
+    pushCommandLog(`Unknown command "${val}". Try L, PL, C, A, REC, POL, XL, EL (Isocircle), FC (4-Center), ISODRAFT, F5, M, CO, RO, MI, TR, EX, O, E, Z, U.`, "warn");
   }
 
   function updateAutocomplete(text) {

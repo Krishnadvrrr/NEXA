@@ -30,6 +30,7 @@
       >
       <nav aria-label="Workspace mode">
         <button class="mode active" data-mode="solid">Projections</button
+        ><button class="mode" data-mode="isometric">Isometric Lab</button
         ><button class="mode" data-mode="practice">Practice Studio</button>
       </nav>
       <button id="export" class="primary">↓ Export drawing sheet</button>
@@ -131,6 +132,84 @@
             <button type="button" id="btnInspectCutSidebar" class="secondary-btn" style="margin-top: 8px; width: 100%">⌖ Inspect True Shape</button>
           </div>
         </section>
+        <section id="isoControls" hidden>
+          <div class="iso-priority-badge">★ UNIT V · GE3251 ISOMETRIC MASTERY</div>
+
+          <label for="isoQuestionSelect">Exam problem preset</label>
+          <select id="isoQuestionSelect"></select>
+
+          <div id="isoScaleToggleGroup" class="iso-scale-switch" role="group" aria-label="Isometric Scale Mode">
+            <button type="button" id="btnIsoModeProj" class="iso-scale-btn active" data-isoscale="projection">
+              Iso Projection<span>0.8165×</span>
+            </button>
+            <button type="button" id="btnIsoModeView" class="iso-scale-btn" data-isoscale="view">
+              Iso View<span>1:1 True</span>
+            </button>
+          </div>
+          <p id="isoRuleBadge" class="iso-rule-badge">
+            Projection Scale: Multiply every axis length by √(2/3) ≈ 0.8165.
+          </p>
+
+          <div class="card-box iso-scale-bar-card">
+            <div class="iso-sb-head">
+              <span>LIVE SCALE COMPARISON</span>
+              <strong id="isoScaleRatioLabel">0.8165×</strong>
+            </div>
+            <div class="iso-sb-row">
+              <span>True</span>
+              <div class="iso-sb-track"><div id="isoBarTrue" class="iso-sb-fill-true" style="width:100%"></div></div>
+              <span id="isoValTrue" class="iso-sb-val">40.0 mm</span>
+            </div>
+            <div class="iso-sb-row">
+              <span>Iso</span>
+              <div class="iso-sb-track"><div id="isoBarShown" class="iso-sb-fill-shown" style="width:81.65%"></div></div>
+              <span id="isoValShown" class="iso-sb-val">32.7 mm</span>
+            </div>
+          </div>
+
+          <div id="isoCustomDimWrap" class="iso-custom-dims">
+            <div class="two">
+              <label><span id="isoBaseDimLbl">Base</span>
+                <div class="unit"><input id="isoBaseInput" type="number" min="10" max="120" value="25" /><span>mm</span></div>
+              </label>
+              <label>Height
+                <div class="unit"><input id="isoHeightInput" type="number" min="15" max="160" value="60" /><span>mm</span></div>
+              </label>
+            </div>
+            <div id="isoExtraDimRow" class="two" hidden>
+              <label id="isoTopWrap">Top Edge
+                <div class="unit"><input id="isoTopInput" type="number" min="5" max="100" value="15" /><span>mm</span></div>
+              </label>
+              <label id="isoCutWrap">Cut θ
+                <div class="unit"><input id="isoCutAngleInput" type="number" min="0" max="70" value="45" /><span>°</span></div>
+              </label>
+            </div>
+          </div>
+
+          <h2>3D Visualizer Layers</h2>
+          <label class="check"><input id="isoShowBox" type="checkbox" checked /> Enclosing Box & Axes (O, 1-4)</label>
+          <label class="check"><input id="isoShowOffsets" type="checkbox" checked /> Offsets & Non-Isometric (Amber)</label>
+          <label class="check" id="isoDualBoxRow"><input id="isoShowDualBox" type="checkbox" checked /> Dual Top Box (Frustums)</label>
+          <label class="check" id="isoGhostRow"><input id="isoShowGhost" type="checkbox" checked /> Cut Section Ghost</label>
+
+          <details id="isoExplainDetails" class="understand-details iso-explainer-card" open>
+            <summary>Why 0.8165? Cube-Tilt Explainer</summary>
+            <div class="understand-body">
+              <canvas id="isoExplainerCanvas" width="246" height="134" class="iso-explainer-canvas"></canvas>
+              <div class="iso-tilt-controls">
+                <button type="button" id="btnPlayIsoTilt" class="vc-mini-btn">▶ Animate Tilt</button>
+                <input id="isoTiltSlider" type="range" min="0" max="100" value="100" aria-label="Cube tilt angle progress" />
+              </div>
+              <p class="note" style="margin-top:4px">
+                Rotating a cube 45° around Z/Y then pitching 35.264° foreshortens every 45° diagonal to 30° iso at cos(35.264°) = 0.8165.
+              </p>
+            </div>
+          </details>
+
+          <button type="button" id="btnIsoToPractice" class="primary iso-cta-btn">
+            Practice This Problem in Studio →
+          </button>
+        </section>
         <section id="practiceControls" hidden>
           <div class="practice-top-actions">
             <button type="button" id="btnAddCustomQuestion" class="primary add-question-btn">
@@ -156,6 +235,7 @@
               <span class="badge" id="problemUnitBadge">UNIT 1</span>
               <div class="card-header-actions">
                 <button type="button" id="btnDeleteCustomQ" class="icon-danger-btn" title="Delete custom question" hidden>🗑</button>
+                <button type="button" id="btnViewIso3D" class="subtle-link-btn" title="Open full 3D Isometric Projection Lab" hidden>◇ Iso Lab ↗</button>
                 <button type="button" id="btnView3D" class="subtle-link-btn" title="Inspect 3D solid model">🔍 View in 3D</button>
               </div>
             </div>
@@ -277,6 +357,47 @@
           <span class="badge">EXPLORATION MODE</span>
         </div>
 
+        <div id="isoWorkspace" class="iso-workspace" hidden>
+          <div class="iso-top-strip">
+            <div class="iso-strip-left">
+              <span id="isoCamLockBadge" class="iso-cam-badge">ORTHO (1,1,1) · 45° / 35.264°</span>
+              <button type="button" id="btnResetTrueIso" class="vc-mini-btn">⌂ Snap True Iso (1,1,1)</button>
+            </div>
+            <div class="iso-strip-right">
+              <span id="isoDimSummary" class="iso-dim-summary">Box: 50.0 × 43.3 × 60.0 mm</span>
+            </div>
+          </div>
+
+          <div id="isoSphereRuleBanner" class="iso-sphere-banner" hidden>
+            ★ <strong>STRICT EG SPHERE RULE:</strong> Center height uses Isometric Scale (0.8165×), while the Sphere circular silhouette keeps its <strong>True Radius</strong>!
+          </div>
+
+          <div class="iso-stage-viewport">
+            <div id="isoThreeHost" class="iso-three-host"></div>
+
+            <!-- Collapsible Linked 2D Reference Inset (FV + TV Sync) -->
+            <div id="isoFvTvInset" class="iso-fvtv-inset">
+              <div class="iso-inset-head">
+                <span>Linked 2D FV + TV</span>
+                <button type="button" id="btnToggleIsoInset" class="mini-clear-btn" title="Collapse / Expand 2D Reference">▾</button>
+              </div>
+              <div id="isoInsetSvgHost" class="iso-inset-svg" title="Hover cut points (1', 2') to highlight on 3D solid"></div>
+            </div>
+          </div>
+
+          <div class="iso-scrubber-bar">
+            <div class="iso-stage-pills" role="group" aria-label="5-Stage Construction Scrubber">
+              <button type="button" class="view-pill" data-isostage="1">1. Footprint</button>
+              <button type="button" class="view-pill" data-isostage="2">2. Axes 30°</button>
+              <button type="button" class="view-pill" data-isostage="3">3. Iso Box</button>
+              <button type="button" class="view-pill" data-isostage="4">4. Offsets</button>
+              <button type="button" class="view-pill active" data-isostage="5">5. Solid</button>
+            </div>
+            <input id="isoStageSlider" type="range" min="1" max="5" value="5" aria-label="Isometric construction stage" />
+            <span id="isoStageCaption" class="iso-stage-caption">Stage 5 · Final Isometric Solid</span>
+          </div>
+        </div>
+
         <div id="practiceWorkspace" class="practice-workspace" hidden>
           <!-- AutoCAD Home Ribbon Bar -->
           <div class="acad-ribbon" role="toolbar" aria-label="AutoCAD Home Ribbon">
@@ -358,6 +479,18 @@
               <div class="ribbon-panel-title">Annotation</div>
             </div>
 
+            <div class="ribbon-panel">
+              <div class="ribbon-buttons">
+                <button type="button" class="ribbon-tool-btn" data-tool="isocircle" title="ELLIPSE -> I (EL) — AutoCAD Isoplane Isocircle">
+                  <span class="r-icon">⬭</span><span>Isocircle</span>
+                </button>
+                <button type="button" class="ribbon-tool-btn" data-tool="fourcenter" title="FOURCENTER (FC) — Step-by-step Rhombus 4-Center Method">
+                  <span class="r-icon">◈</span><span>4-Center</span>
+                </button>
+              </div>
+              <div class="ribbon-panel-title">Isometric</div>
+            </div>
+
             <div class="ribbon-panel ribbon-layers-panel">
               <div class="ribbon-buttons layer-controls-wrap">
                 <div class="acad-layer-picker">
@@ -387,6 +520,12 @@
                   <input id="lengthLockInput" type="number" step="any" min="1" max="400" placeholder="Free" aria-label="Lock length in mm" />
                   <span class="lock-unit">mm</span>
                   <button type="button" id="btnClearLengthLock" class="mini-clear-btn" hidden title="Unlock length">×</button>
+                </div>
+                <div class="cad-lock-pill iso-calc-pill" title="Convert True Length × 0.8165 for Isometric Projection & apply to Length Lock">
+                  <span class="lock-prefix">×.816</span>
+                  <input id="isoCalcTrueInput" type="number" step="any" min="1" max="300" placeholder="True" aria-label="True length to scale by 0.8165" />
+                  <span id="isoCalcOut" class="iso-calc-out">—</span>
+                  <button type="button" id="btnApplyIsoScale" class="mini-mode-btn" title="Set Length Lock to True × 0.8165">Use</button>
                 </div>
                 <datalist id="commonAnglesList">
                   <option value="15"></option><option value="30"></option><option value="40"></option>
@@ -510,6 +649,8 @@
               <button type="button" id="btnStatusOsnap" class="aid-btn active" title="Toggle Object Snap (F3)">OSNAP (F3)</button>
               <button type="button" id="btnStatusDyn" class="aid-btn active" title="Toggle Dynamic Input beside cursor (F12)">DYNMODE (F12)</button>
               <button type="button" id="btnStatusLwt" class="aid-btn active" title="Show/Hide Layer Lineweights">LWT</button>
+              <button type="button" id="btnStatusIsodraft" class="aid-btn" title="Toggle AutoCAD ISODRAFT Mode (30°/150° Grid + Iso Crosshair)">ISODRAFT</button>
+              <button type="button" id="btnStatusIsoplane" class="aid-btn" title="Cycle Isoplane Top / Left / Right (F5 or Ctrl+E)">ISOPLANE: TOP (F5)</button>
             </div>
           </div>
         </div>

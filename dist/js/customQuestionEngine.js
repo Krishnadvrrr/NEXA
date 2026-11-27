@@ -328,6 +328,19 @@ export function buildQuestionComprehension(question) {
     };
   }
 
+  if (question.unit === "Isometric Projection") {
+    const modeLabel = p.scaleMode === "view" ? "Isometric View (1:1 True Scale)" : "Isometric Projection (0.8165 Scale)";
+    return {
+      simplePositionRule: `Use ${modeLabel}. Draw principal axes at 30° right, 150° left, and 90° vertical via ISODRAFT + F5 Isoplanes.`,
+      baseOrientationRule: `Enclose the base (${edge} mm) inside an isometric enclosing box aligned along 30° and 150° axes, plotting non-isometric offsets before darkening visible edges.`,
+      calculations: [
+        `True Base Size = ${edge} mm · Height = ${height} mm`,
+        `Isometric Length = ${(edge * Math.sqrt(2 / 3)).toFixed(2)} mm (0.8165×) · Isometric Height = ${(height * Math.sqrt(2 / 3)).toFixed(2)} mm`
+      ],
+      visibilityTip: "Hidden rear lines inside solids are omitted in Isometric drawings. Always keep Sphere radius at True Radius when stacking!"
+    };
+  }
+
   if (question.unit === "Section of Solids") {
     return {
       simplePositionRule: `Since the ${meta.label.toLowerCase()} rests on its base on HP, first draw its full upright Top View (below XY) and Front View (${height} mm tall above XY).`,

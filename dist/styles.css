@@ -2012,3 +2012,288 @@ dialog .primary {
 .pure-autocad-mode #btnToggleGhost {
   display: none !important;
 }
+
+/* =========================================================================
+   ISOMETRIC PROJECTION LAB & ISODRAFT UI (Strict Pure Black & White Theme)
+   ========================================================================= */
+.iso-lab-mode .workspace-heading {
+  display: none;
+}
+
+.iso-priority-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: #141008;
+  border: 1px solid #4a3714;
+  color: #f5b95d;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.iso-scale-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 10px;
+}
+.iso-scale-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 6px;
+  border-radius: 5px;
+  background: #0d0d0d;
+  border: 1px solid #262626;
+  color: #cccccc;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 2px;
+}
+.iso-scale-btn span {
+  font-family: monospace;
+  font-size: 10px;
+  opacity: 0.8;
+}
+.iso-scale-btn.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+.iso-rule-badge {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #bbbbbb;
+  margin: 7px 0 8px;
+  padding: 6px 8px;
+  background: #080808;
+  border: 1px solid #1f1f1f;
+  border-radius: 4px;
+}
+
+.iso-scale-bar-card {
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: #080808;
+  border: 1px solid #222222;
+}
+.iso-sb-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #888888;
+  margin-bottom: 6px;
+}
+.iso-sb-head strong {
+  color: #f5b95d;
+  font-family: monospace;
+}
+.iso-sb-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 56px;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #cccccc;
+  margin: 4px 0;
+}
+.iso-sb-track {
+  height: 7px;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.iso-sb-fill-true {
+  height: 100%;
+  background: #ffffff;
+}
+.iso-sb-fill-shown {
+  height: 100%;
+  background: #f5b95d;
+  transition: width 0.25s ease;
+}
+.iso-sb-val {
+  font-family: monospace;
+  font-size: 10px;
+  text-align: right;
+  color: #ffffff;
+}
+
+.iso-custom-dims {
+  margin-bottom: 6px;
+}
+
+.iso-explainer-card {
+  margin-top: 10px;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  background: #080808;
+}
+.iso-explainer-canvas {
+  width: 100%;
+  height: auto;
+  background: #000000;
+  border: 1px solid #1f1f1f;
+  border-radius: 4px;
+  display: block;
+}
+.iso-tilt-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.iso-tilt-controls input[type="range"] {
+  flex: 1;
+  margin: 0 !important;
+  accent-color: #ffffff;
+}
+.iso-cta-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* Main Isometric Lab Viewport & Stage Controls */
+.iso-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 610px;
+}
+.iso-top-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #080808;
+  border: 1px solid #1f1f1f;
+  border-radius: 6px;
+}
+.iso-strip-left,
+.iso-strip-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.iso-cam-badge {
+  font-family: monospace;
+  font-size: 11px;
+  color: #cccccc;
+  padding: 3px 8px;
+  background: #000000;
+  border: 1px solid #262626;
+  border-radius: 4px;
+}
+.iso-dim-summary {
+  font-family: monospace;
+  font-size: 11px;
+  color: #f5b95d;
+}
+.iso-sphere-banner {
+  padding: 7px 10px;
+  background: #141008;
+  border: 1px solid #4a3714;
+  border-radius: 5px;
+  color: #f5b95d;
+  font-size: 11.5px;
+}
+
+.iso-stage-viewport {
+  position: relative;
+  height: 530px;
+  background: #000000;
+  border: 1px solid #1f1f1f;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.iso-three-host {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.iso-three-host canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.iso-fvtv-inset {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 214px;
+  background: rgba(0, 0, 0, 0.94);
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  z-index: 15;
+  overflow: hidden;
+}
+.iso-inset-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #0a0a0a;
+  border-bottom: 1px solid #1f1f1f;
+  font-size: 10px;
+  font-weight: 700;
+  color: #cccccc;
+}
+.iso-inset-svg {
+  padding: 4px;
+  height: 192px;
+}
+.iso-fvtv-inset.collapsed .iso-inset-svg {
+  display: none;
+}
+.iso-fvtv-inset.collapsed {
+  width: 158px;
+}
+
+.iso-scrubber-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #080808;
+  border: 1px solid #1f1f1f;
+  border-radius: 6px;
+}
+.iso-stage-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.iso-scrubber-bar input[type="range"] {
+  width: 120px;
+  margin: 0 !important;
+  accent-color: #ffffff;
+}
+.iso-stage-caption {
+  font-size: 11px;
+  color: #cccccc;
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Practice Studio Iso Scale Converter Widget */
+.iso-calc-pill input {
+  width: 38px !important;
+}
+.iso-calc-out {
+  font-family: monospace;
+  font-size: 10px;
+  color: #f5b95d;
+  min-width: 44px;
+  text-align: center;
+}

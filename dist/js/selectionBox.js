@@ -51,6 +51,15 @@ export function getEntityBounds(el) {
       yMax: el.cy + el.radius
     };
   }
+  if (el.type === "ellipse") {
+    const rMax = Math.max(el.rx || 1, el.ry || 1);
+    return {
+      xMin: el.cx - rMax,
+      xMax: el.cx + rMax,
+      yMin: el.cy - rMax,
+      yMax: el.cy + rMax
+    };
+  }
   if ((el.type === "polygon" || el.type === "polyline") && Array.isArray(el.points) && el.points.length > 0) {
     const xs = el.points.map((p) => p[0]);
     const ys = el.points.map((p) => p[1]);
@@ -105,6 +114,10 @@ export function isEntityCrossingRect(el, rect) {
     }
   }
 
+  if (el.type === "ellipse") {
+    return pointInRect(el.cx, el.cy, rect);
+  }
+
   if (el.type === "text") {
     return pointInRect(el.x, el.y, rect);
   }
@@ -147,6 +160,17 @@ export function hitTestEntity(worldPt, elements, tolWorld = 3.0, isSelectable = 
     if (el.type === "circle" || el.type === "arc") {
       const d = Math.abs(Math.hypot(worldPt.x - el.cx, worldPt.y - el.cy) - el.radius);
       if (d <= tolWorld) return el;
+    } else if (el.type === "ellipse") {
+      const rot = ((el.rotationDeg || 0) * Math.PI) / 180;
+      const cosR = Math.cos(rot);
+      const sinR = Math.sin(rot);
+      const dx = worldPt.x - el.cx;
+      const dy = worldPt.y - el.cy;
+      const lx = dx * cosR + dy * sinR;
+      const ly = -dx * sinR + dy * cosR;
+      const norm = Math.hypot(lx / (el.rx || 1), ly / (el.ry || 1));
+      const approxDist = Math.abs(norm - 1) * Math.min(el.rx || 1, el.ry || 1);
+      if (approxDist <= tolWorld || Math.hypot(dx, dy) <= tolWorld * 1.4) return el;
     } else if (el.type === "text") {
       if (Math.hypot(worldPt.x - el.x, worldPt.y - el.y) <= tolWorld * 1.8) return el;
     }

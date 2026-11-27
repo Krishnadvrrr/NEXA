@@ -45,14 +45,15 @@ export function clearThreeGroup(group) {
 
 export function createSpriteLabel(text, pos, color = "#9ca3af", scaleSize = [32, 8], targetGroup = null) {
   const canvas = document.createElement("canvas");
-  canvas.width = 256;
+  const isWide = scaleSize[0] > 36 || String(text).length > 16;
+  canvas.width = isWide ? 512 : 256;
   canvas.height = 64;
   const ctx = canvas.getContext("2d");
-  ctx.font = "600 24px 'Segoe UI', monospace";
+  ctx.font = "600 22px 'Segoe UI', monospace";
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, 128, 32);
+  ctx.fillText(text, canvas.width / 2, 32, canvas.width - 16);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;

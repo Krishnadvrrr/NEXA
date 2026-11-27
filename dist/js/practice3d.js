@@ -26,6 +26,8 @@ import {
   createCameraAnimator,
   mountViewportOverlay
 } from "./viewCube.js";
+import { buildIsoSolidAssemblySpec } from "./isoSolidsBuilder.js";
+import { buildIsoLabSceneContent } from "./isoBoxOverlay.js";
 
 /**
  * High-Precision Synchronized 2D <-> 3D Engineering Graphics Visualizer (Practice Studio)
@@ -484,6 +486,32 @@ export function createPractice3D(host) {
 
     if (syncMode === "draft" || !question) {
       updateFrom2DReconstruction(drawnElements, !question);
+      applyFoldVisibility();
+      dirty = true;
+      return;
+    }
+
+    if (question.unit === "Isometric Projection") {
+      hud.setSectionActive(false);
+      viewCube.setInspectVisible(false);
+      const spec = buildIsoSolidAssemblySpec(question.parameters || {}, question.scaleMode || "projection");
+      const isoStage = Math.min(5, stepIndex + 2);
+      const built = buildIsoLabSceneContent(spec, {
+        visualStyle,
+        showBox: true,
+        showDualBox: true,
+        showOffsets: showGuides,
+        showGhost: true,
+        stage: isoStage
+      });
+      built.root.position.set(0, 0.25, 42);
+      stageGroup.add(built.root);
+      updateSpatialDescription(
+        `Isometric Step ${stepIndex + 1} · ${spec.scaleMode === "view" ? "1:1 True View" : "0.8165 Projection"}`,
+        spec.sphereSpec
+          ? "Sphere Rule: Scale center distance by 0.8165, keep Sphere circle at True Radius!"
+          : "Cyan Box = 30°/30°/90° Isometric axes · Amber = Non-Isometric edges & offsets."
+      );
       applyFoldVisibility();
       dirty = true;
       return;

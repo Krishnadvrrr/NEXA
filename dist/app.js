@@ -7,6 +7,9 @@ import { PracticeCanvas } from "./js/practiceCanvas.js";
 import { createPractice3D } from "./js/practice3d.js";
 import { initAutocadWorkspaceUI } from "./js/autocadRibbon.js";
 import { formatStepAutoCadCommand } from "./js/commandParser.js";
+import { ISOMETRIC_QUESTIONS, ISO_UNIT_ID } from "./js/data/isometricQuestions.js";
+import { createIsoLabController } from "./js/isoLabController.js";
+import { ISO_SCALE } from "./js/isoCameraRig.js";
 import {
   SOLID_CATALOG,
   parseFacultyQuestionText,
@@ -46,10 +49,12 @@ let state = { ...defaults },
   modelKey = "",
   sectionKey = "";
 
-// Practice Studio state
+// Practice Studio & Isometric Lab state
 let customQuestions = loadCustomQuestions(),
   practiceCanvas = null,
   livePractice3D = null,
+  isoLab = null,
+  selectedIsoQuestionId = ISOMETRIC_QUESTIONS[0]?.id || null,
   currentQuestion = QUESTIONS[0],
   currentStepIndex = 0,
   preview3dRenderer = null;
@@ -83,7 +88,7 @@ function normalize() {
   for (const key of ["solid", "side"])
     if (![...$(key).options].some((o) => o.value === state[key]))
       state[key] = defaults[key];
-  if (!["solid", "practice"].includes(state.mode)) state.mode = "solid";
+  if (!["solid", "isometric", "practice"].includes(state.mode)) state.mode = "solid";
 }
 normalize();
 
@@ -103,20 +108,24 @@ function sync() {
   if ($("sectionControls")) $("sectionControls").hidden = !state.sectionEnabled;
 
   const practice = state.mode === "practice";
+  const isoMode = state.mode === "isometric";
 
   document.body.classList.toggle("practice-mode", practice);
+  document.body.classList.toggle("iso-lab-mode", isoMode);
 
-  $("solidControls").hidden = practice;
+  $("solidControls").hidden = practice || isoMode;
+  if ($("isoControls")) $("isoControls").hidden = !isoMode;
   $("practiceControls").hidden = !practice;
 
   const layerCtrl = $("layerControls");
-  if (layerCtrl) layerCtrl.hidden = practice;
+  if (layerCtrl) layerCtrl.hidden = practice || isoMode;
 
-  $("panels").hidden = practice;
+  $("panels").hidden = practice || isoMode;
+  if ($("isoWorkspace")) $("isoWorkspace").hidden = !isoMode;
   $("practiceWorkspace").hidden = !practice;
 
   const insightEl = $("insightTitle")?.closest(".insight");
-  if (insightEl) insightEl.hidden = practice;
+  if (insightEl) insightEl.hidden = practice || isoMode;
 
   document.querySelectorAll(".mode").forEach((b) => {
     b.classList.toggle("active", b.dataset.mode === state.mode);
@@ -136,6 +145,17 @@ function sync() {
         practiceCanvas.resize();
         livePractice3D?.resize();
       }, 10);
+    }
+  } else if (isoMode) {
+    $("modeTitle").textContent = "Isometric Lab";
+    $("modeDescription").textContent = "";
+    $("workspaceTitle").textContent = "Unit V · Isometric Projection Mastery";
+    document.querySelectorAll("[data-view]").forEach((b) => (b.disabled = true));
+    $("angleStatus").textContent = "ORTHO (1,1,1) · 45° / 35.264°";
+    if (!isoLab) {
+      initIsometricLab();
+    } else {
+      setTimeout(() => isoLab.resize(), 10);
     }
   } else {
     $("modeTitle").textContent = "Solid projections";
@@ -179,6 +199,12 @@ function render() {
   if (state.mode === "practice") {
     if (practiceCanvas) practiceCanvas.render();
     $("status").textContent = "Practice Studio active · Ready for drafting";
+    return;
+  }
+
+  if (state.mode === "isometric") {
+    if (isoLab) isoLab.resize();
+    $("status").textContent = "Isometric Lab active · True (1,1,1) Orthographic Camera";
     return;
   }
 
@@ -360,12 +386,14 @@ window.addEventListener("pagehide", () => {
   renderer?.dispose();
   preview3dRenderer?.dispose();
   livePractice3D?.dispose();
+  isoLab?.dispose();
 });
 
 window.addEventListener("resize", () => {
   renderer?.resize();
   practiceCanvas?.resize();
   livePractice3D?.resize();
+  isoLab?.resize();
 });
 
 // ===========================================================================
@@ -495,6 +523,26 @@ function initPracticeStudio() {
 
     const delBtn = $("btnDeleteCustomQ");
     if (delBtn) delBtn.hidden = !currentQuestion.isCustom;
+
+    const isIsoQ = currentQuestion.unit === ISO_UNIT_ID;
+    const isoJumpBtn = $("btnViewIso3D");
+    if (isoJumpBtn) {
+      isoJumpBtn.hidden = !isIsoQ;
+      isoJumpBtn.onclick = () => {
+        selectedIsoQuestionId = currentQuestion.id;
+        state.mode = "isometric";
+        schedule();
+        setTimeout(() => {
+          if ($("isoQuestionSelect")) {
+            $("isoQuestionSelect").value = currentQuestion.id;
+            isoLab?.loadQuestion(currentQuestion);
+          }
+        }, 30);
+      };
+    }
+    if (practiceCanvas) {
+      practiceCanvas.setIsoDraft(isIsoQ, "top");
+    }
 
     const paramContainer = $("problemParams");
     paramContainer.innerHTML = "";
@@ -716,9 +764,13 @@ function initPracticeStudio() {
   if ($("canvasRedo")) $("canvasRedo").onclick = () => practiceCanvas.redo();
   if ($("btnResetView")) $("btnResetView").onclick = () => practiceCanvas.resetView();
 
-  // 10. 3D Solid Model Inspector Modal
+  // 10. 3D Solid Model Inspector Modal (routes Isometric problems straight to interactive Isometric Lab)
   $("btnView3D").onclick = async () => {
     if (!currentQuestion) return;
+    if (currentQuestion.unit === ISO_UNIT_ID && $("btnViewIso3D")) {
+      $("btnViewIso3D").click();
+      return;
+    }
     $("preview3dDialog").showModal();
     const p = currentQuestion.parameters || {};
 
@@ -1005,8 +1057,168 @@ function initPracticeStudio() {
     };
   }
 
-  // Initialize with all questions
+    // Initialize with all questions
   updateQuestionDropdown("all");
+  window.__egPracticeHelpers = {
+    selectQuestion: (topicId, qId) => {
+      topicSelect.value = topicId;
+      updateQuestionDropdown(topicId, qId);
+      practiceCanvas?.setIsoDraft(true, "top");
+      practiceCanvas?.resetView();
+    }
+  };
+}
+
+// ===========================================================================
+// 3D ISOMETRIC PROJECTION LAB CONTROLLER
+// ===========================================================================
+function initIsometricLab() {
+  const hostEl = $("isoThreeHost");
+  if (!hostEl) return;
+
+  isoLab = createIsoLabController({
+    viewportEl: hostEl,
+    insetEl: $("isoInsetSvgHost"),
+    explainerCanvasEl: $("isoExplainerCanvas")
+  });
+
+  const qSelect = $("isoQuestionSelect");
+  if (qSelect) {
+    qSelect.innerHTML = "";
+    ISOMETRIC_QUESTIONS.forEach((q, idx) => {
+      const opt = document.createElement("option");
+      opt.value = q.id;
+      opt.textContent = `${idx + 1}. ${q.title}`;
+      qSelect.appendChild(opt);
+    });
+    if (selectedIsoQuestionId) qSelect.value = selectedIsoQuestionId;
+  }
+
+  const syncInputsFromQuestion = (q) => {
+    const p = q?.parameters || {};
+    const hasTop = p.topEdge !== undefined;
+    const hasCut = p.cutAngle !== undefined || p.cuttingAngle !== undefined;
+    $("isoBaseDimLbl").textContent = p.diameter ? "Diameter" : "Base Edge";
+    $("isoBaseInput").value = p.diameter || p.baseEdge || 30;
+    $("isoHeightInput").value = p.height || 60;
+    if ($("isoExtraDimRow")) $("isoExtraDimRow").hidden = !hasTop && !hasCut;
+    if ($("isoTopWrap")) $("isoTopWrap").hidden = !hasTop;
+    if ($("isoCutWrap")) $("isoCutWrap").hidden = !hasCut;
+    if (hasTop) $("isoTopInput").value = p.topEdge;
+    if (hasCut) $("isoCutAngleInput").value = p.cutAngle || p.cuttingAngle || 45;
+    if ($("isoDualBoxRow")) $("isoDualBoxRow").hidden = !hasTop;
+    if ($("isoGhostRow")) $("isoGhostRow").hidden = !hasCut;
+  };
+
+  isoLab.onStateChange((st) => {
+    if (!st || !st.spec) return;
+    const isView = st.scaleMode === "view";
+    $("btnIsoModeProj")?.classList.toggle("active", !isView);
+    $("btnIsoModeView")?.classList.toggle("active", isView);
+    if ($("isoRuleBadge")) {
+      $("isoRuleBadge").textContent = isView
+        ? "Isometric View (1:1): Draws true dimensions directly along 30°/150°/90° axes (× 1.000)."
+        : "Isometric Projection (0.8165): Multiplies every axis edge by √(2/3) ≈ 0.8165 (Sphere keeps True R).";
+    }
+
+    const refTrue = st.spec.metrics.trueW || 40;
+    const refShown = isView ? refTrue : refTrue * ISO_SCALE;
+    if ($("isoScaleRatioLabel")) $("isoScaleRatioLabel").textContent = isView ? "1.000× (View)" : "0.8165× (Proj)";
+    if ($("isoValTrue")) $("isoValTrue").textContent = `${refTrue.toFixed(1)} mm`;
+    if ($("isoValShown")) $("isoValShown").textContent = `${refShown.toFixed(1)} mm`;
+    if ($("isoBarShown")) $("isoBarShown").style.width = isView ? "100%" : `${(ISO_SCALE * 100).toFixed(2)}%`;
+
+    if ($("isoDimSummary")) {
+      const m = st.spec.metrics;
+      $("isoDimSummary").textContent = `Box: ${m.shownW.toFixed(1)} × ${m.shownD.toFixed(1)} × ${m.shownH.toFixed(1)} mm`;
+    }
+    if ($("isoCamLockBadge")) {
+      $("isoCamLockBadge").textContent = st.camSnappedToIso
+        ? "ORTHO (1,1,1) · 45° / 35.264° LOCKED"
+        : "ORBITED · Click Snap True Iso (1,1,1)";
+    }
+    if ($("isoSphereRuleBanner")) {
+      $("isoSphereRuleBanner").hidden = !st.spec.sphereSpec;
+    }
+
+    document.querySelectorAll("[data-isostage]").forEach((btn) => {
+      btn.classList.toggle("active", Number(btn.dataset.isostage) === st.stage);
+    });
+    if ($("isoStageSlider")) $("isoStageSlider").value = String(st.stage);
+    if ($("isoStageCaption")) $("isoStageCaption").textContent = st.stageDescription || "";
+  });
+
+  const loadById = (id) => {
+    selectedIsoQuestionId = id;
+    const q = ISOMETRIC_QUESTIONS.find((item) => item.id === id) || ISOMETRIC_QUESTIONS[0];
+    syncInputsFromQuestion(q);
+    isoLab.loadQuestion(q);
+  };
+
+  qSelect?.addEventListener("change", () => loadById(qSelect.value));
+
+  $("btnIsoModeProj")?.addEventListener("click", () => isoLab.setScaleMode("projection"));
+  $("btnIsoModeView")?.addEventListener("click", () => isoLab.setScaleMode("view"));
+  $("btnResetTrueIso")?.addEventListener("click", () => isoLab.snapToTrueIso(true));
+
+  ["isoBaseInput", "isoHeightInput", "isoTopInput", "isoCutAngleInput"].forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      const activeQ = ISOMETRIC_QUESTIONS.find((item) => item.id === qSelect?.value) || ISOMETRIC_QUESTIONS[0];
+      const baseP = { ...(activeQ?.parameters || {}) };
+      const bVal = Number($("isoBaseInput").value) || 30;
+      const hVal = Number($("isoHeightInput").value) || 60;
+      if (baseP.diameter !== undefined) {
+        baseP.diameter = bVal;
+        baseP.radius = bVal / 2;
+      } else {
+        baseP.baseEdge = bVal;
+      }
+      baseP.height = hVal;
+      if (baseP.topEdge !== undefined) baseP.topEdge = Number($("isoTopInput").value) || 15;
+      if (baseP.cutAngle !== undefined || baseP.cuttingAngle !== undefined) {
+        const ca = Number($("isoCutAngleInput").value) || 30;
+        baseP.cutAngle = ca;
+        baseP.cuttingAngle = ca;
+        baseP.cutHeight = hVal / 2;
+      }
+      isoLab.loadCustomParams(baseP);
+    });
+  });
+
+  $("isoShowBox")?.addEventListener("change", (e) => isoLab.setOverlayOptions({ showBox: e.target.checked }));
+  $("isoShowOffsets")?.addEventListener("change", (e) => isoLab.setOverlayOptions({ showOffsets: e.target.checked }));
+  $("isoShowDualBox")?.addEventListener("change", (e) => isoLab.setOverlayOptions({ showDualBox: e.target.checked }));
+  $("isoShowGhost")?.addEventListener("change", (e) => isoLab.setOverlayOptions({ showGhost: e.target.checked }));
+
+  $("btnPlayIsoTilt")?.addEventListener("click", () => isoLab.playTiltExplainer());
+  $("isoTiltSlider")?.addEventListener("input", (e) => isoLab.setTiltProgress(Number(e.target.value) / 100));
+
+  $("btnToggleIsoInset")?.addEventListener("click", () => {
+    const inset = $("isoFvTvInset");
+    if (!inset) return;
+    const isCollapsed = inset.classList.toggle("collapsed");
+    $("btnToggleIsoInset").textContent = isCollapsed ? "▸" : "▾";
+  });
+
+  document.querySelectorAll("[data-isostage]").forEach((btn) => {
+    btn.addEventListener("click", () => isoLab.setStage(Number(btn.dataset.isostage)));
+  });
+  $("isoStageSlider")?.addEventListener("input", (e) => isoLab.setStage(Number(e.target.value)));
+
+  // Seamless handoff into Practice Studio with ISODRAFT + exact GE3251 problem loaded!
+  $("btnIsoToPractice")?.addEventListener("click", () => {
+    const qId = qSelect?.value || selectedIsoQuestionId || ISOMETRIC_QUESTIONS[0].id;
+    state.mode = "practice";
+    schedule();
+    setTimeout(() => {
+      window.__egPracticeHelpers?.selectQuestion(ISO_UNIT_ID, qId);
+      $("notice").textContent = "Practice Studio opened with ISODRAFT (F5 Isoplanes) & GE3251 Isometric problem!";
+    }, 30);
+  });
+
+  loadById(selectedIsoQuestionId || ISOMETRIC_QUESTIONS[0].id);
 }
 
 // Initial render
